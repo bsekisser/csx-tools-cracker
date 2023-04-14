@@ -113,7 +113,7 @@ typedef struct cracker_t {
 
 /* **** */
 
-uint32_t _read(cracker_p cj, uint32_t pat, uint8_t size);
+uint32_t _read(cracker_p cj, uint32_t pat, size_t size);
 symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size);
 void cracker_reg_dst(cracker_p cj, uint8_t r);
 void cracker_reg_src(cracker_p cj, uint8_t r);

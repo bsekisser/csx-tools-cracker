@@ -43,31 +43,34 @@
 
 /* **** */
 
-int _check_bounds(cracker_p cj, uint32_t pat, uint8_t size, void **p2ptr)
+uint8_t* _check_bounds(cracker_p cj, uint32_t pat, size_t size, void **p2ptr)
 {
-	if((pat >= cj->content.base) && ((pat + size) <= cj->content.end))
-	{
-		if(p2ptr)
-			*p2ptr = cj->content.data + (pat - cj->content.base);
-		return(1);
-	}
+	if(pat < cj->content.base)
+		return(0);
+	if(pat > (cj->content.end - size))
+		return(0);
+
+	uint8_t* target = cj->content.data + (pat - cj->content.base);
 	
-	return(0);
+	if(p2ptr)
+		*p2ptr = target;
+	
+	return(target);
 }
 
-uint32_t _read(cracker_p cj, uint32_t pat, uint8_t size)
+uint32_t _read(cracker_p cj, uint32_t pat, size_t size)
 {
 	uint32_t res = 0;
-	uint8_t* src = 0;
-
-	if(!_check_bounds(cj, pat, size, (void*)&src))
+	uint8_t* src = _check_bounds(cj, pat, size, 0);
+	
+	if(0 == src)
 	{
 //		return(0xdeadbeef);
 		return(-1);
 		LOG_ACTION(exit(-1));
 	}
 
-	for(int i = 0; i < size; i++)
+	for(uint i = 0; i < size; i++)
 		res |= ((*src++) << (i << 3));
 
 	return(res);
@@ -277,7 +280,7 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 		
 		symbol_enqueue(sqh, lhs, cjs, rhs);
 
-		if(!_check_bounds(cj, pat, sizeof(uint32_t), 0))
+		if(0 == _check_bounds(cj, pat, sizeof(uint32_t), 0))
 			cjs->pass++;
 
 		if(cj->symbol && (cj->symbol->pat <= pat)) {

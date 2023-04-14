@@ -15,26 +15,17 @@
 #define ARM_IR_6_5 mlBFEXT(IR, 6, 5)
 #define ARM_IR_27_25 mlBFEXT(IR, 27, 25)
 
+/* **** */
+
 enum {
+	ARM_IR_LDST_BIT_b22 = 22,
 	ARM_IR_LDST_BIT_l20 = 20,
+	ARM_IR_LDST_BIT_p24 = 24,
+	ARM_IR_LDST_BIT_u23 = 23,
+	ARM_IR_LDST_BIT_w21 = 21,
 };
 
 #define ARM_IR_LDST_BIT(_x) BEXT(IR, ARM_IR_LDST_BIT_ ## _x)
-
-#define ARM_LDST_B BEXT(IR, 22)
-#define ARM_LDST_H BEXT(IR, 5)
-#define ARM_LDST_I22 BEXT(IR, 22)
-#define ARM_LDST_L BEXT(IR, 20)
-#define ARM_LDST_P BEXT(IR, 24)
-#define ARM_LDST_U BEXT(IR, 23)
-#define ARM_LDST_S BEXT(IR, 6)
-#define ARM_LDST_W BEXT(IR, 21)
-#define ARM_LDSTM_S BEXT(IR, 22)
-
-#define ARM_LDST_FLAG_B (ARM_LDST_FLAG_S && !ARM_LDST_H)
-#define ARM_LDST_FLAG_H (ARM_LDST_H & !ARM_LDST_FLAG_D)
-#define ARM_LDST_FLAG_D (!ARM_LDST_L && ARM_LDST_S)
-#define ARM_LDST_FLAG_S (ARM_LDST_L && ARM_LDST_S)
 
 /* **** */
 
@@ -48,6 +39,13 @@ enum {
 
 enum {
 	ARM_IR_LDST_SH_BIT_i22 = 22,
+	ARM_IR_LDST_SH_BIT_s6 = 6,
+	ARM_IR_LDST_SH_BIT_h5 = 5,
 };
 
 #define ARM_IR_LDST_SH_BIT(_x) BEXT(IR, ARM_IR_LDST_SH_BIT_ ## _x)
+
+#define ARM_IR_LDST_SH_FLAG_B (ARM_IR_LDST_SH_FLAG_S && !ARM_IR_LDST_SH_BIT(h5))
+#define ARM_IR_LDST_SH_FLAG_H (ARM_IR_LDST_SH_BIT(h5) & !ARM_IR_LDST_SH_FLAG_D)
+#define ARM_IR_LDST_SH_FLAG_D (!ARM_IR_LDST_BIT(l20) && ARM_IR_LDST_SH_BIT(s6))
+#define ARM_IR_LDST_SH_FLAG_S (ARM_IR_LDST_BIT(l20) && ARM_IR_LDST_SH_BIT(s6))
