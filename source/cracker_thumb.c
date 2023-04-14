@@ -41,7 +41,13 @@ static int thumb_add_rd_pcsp_i(cracker_p cj)
 
 	CORE_TRACE_START();
 
-	_CORE_TRACE_("ADD(%s, %s, 0x%03x)", rR_NAME(D), rR_NAME(N), imm8);
+	_CORE_TRACE_("%s(%s, %s", imm8 ? "ADD" : "MOV", rR_NAME(D), rR_NAME(N));
+
+	if(imm8) {
+		_CORE_TRACE_(", 0x%03x", imm8);
+	}
+
+	_CORE_TRACE_(")");
 
 	if(rPC == rR(N)) {
 		vGPR_rR(D) = vR(N) + imm8;
@@ -49,7 +55,7 @@ static int thumb_add_rd_pcsp_i(cracker_p cj)
 		_CORE_TRACE_("; /* 0x%08x */", vGPR_rR(D));
 	}
 
-	CORE_TRACE_END(")");
+	CORE_TRACE_END();
 
 	return(1);
 }
@@ -68,16 +74,23 @@ static int thumb_add_sub_rn_rd(cracker_p cj)
 	setup_rR_vR_src(N, mlBFEXT(IR, 5, 3));
 	setup_rR_dst_src(D, mlBFEXT(IR, 2, 0), rR(N));
 
-	CORE_TRACE_START("%s(%s, %s, ", ops[op2], reg_name[rR(D)],
-		reg_name[rR(N)]);
+	if(bit_i && op2 && (0 == vR(M))) {
+		CORE_TRACE_START("MOV(%s, %s", reg_name[rR(D)],
+			reg_name[rR(N)]);
+	} else {
+		CORE_TRACE_START("%s(%s, %s, ", ops[op2], reg_name[rR(D)],
+			reg_name[rR(N)]);
+	}
 
 	if(bit_i) {
-		_CORE_TRACE_("0x%01x", vR(M));
+		if(!op2 || vR(M)) {
+			_CORE_TRACE_("0x%01x", vR(M));
+		}
 	} else {
 		_CORE_TRACE_("%s", reg_name[rR(M)]);
 	}
 
-	if(rPC == rR_SRC(N)) {
+	if((rPC == rR_SRC(N)) && bit_i && vR(M)) {
 		uint8_t aluop[2] = { ARM_SUB, ARM_ADD };
 		
 		vR(D) = alubox(aluop[op2], vR(N), vR(M));

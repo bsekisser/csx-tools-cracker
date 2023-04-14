@@ -43,7 +43,7 @@
 
 /* **** */
 
-uint8_t* _check_bounds(cracker_p cj, uint32_t pat, size_t size, void **p2ptr)
+static uint8_t* _check_bounds(cracker_p cj, uint32_t pat, size_t size, void **p2ptr)
 {
 	if(pat < cj->content.base)
 		return(0);
@@ -140,9 +140,23 @@ void symbol_log(cracker_p cj, symbol_p cjs)
 
 	_LOG_(" refs: 0x%04x", cjs->refs);
 
-	if(BTST(cjs->type, SYMBOL_TEXT))
-		LOG_END(" TEXT ENTRY");
-	
+	if(BTST(cjs->type, SYMBOL_TEXT)) {
+		uint32_t reg_src = cjs->reg.src;
+		if(reg_src) {
+			_LOG_(" TEXT ENTRY { ");
+			for(int i = 0; reg_src; i++) {
+				if(BTST(reg_src, i)) {
+					BCLR(reg_src, i);
+					_LOG_("r%u", i);
+					if(reg_src)
+						_LOG_(", ");
+				}
+			}
+			LOG_END(" }");
+		} else
+			LOG_END(" TEXT ENTRY");
+	}
+
 	if(BTST(cjs->type, SYMBOL_DATA)) {
 		uint32_t data = 0;
 		size_t size = cjs->size;
@@ -243,7 +257,8 @@ void cracker_reg_src(cracker_p cj, uint8_t r)
 	if(!cj->symbol)
 		return;
 
-	BSET(cj->symbol->reg.src, r);
+	if(!BTST(cj->symbol->reg.dst, r))
+		BSET(cj->symbol->reg.src, r);
 }
 
 static int cracker_step(cracker_p cj)

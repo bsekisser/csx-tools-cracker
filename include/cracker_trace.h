@@ -12,7 +12,7 @@
 #define CORE_TRACE_START(_f, ...) \
 	({ \
 		int _thumb = IP & 1; \
-		int _ip = IP & (_thumb ? ~1 : ~3); \
+		uint32_t _ip = IP & (_thumb ? ~1 : ~3); \
 		_CORE_TRACE_("%c(0x%08x, 0x%08x, %s, " _f, _thumb ? 'T' : 'A', _ip, IR, CCs(1), ##__VA_ARGS__); \
 	})
 
