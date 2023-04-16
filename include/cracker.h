@@ -54,33 +54,45 @@ typedef struct symbol_t {
 	uint type;
 }symbol_t;
 
-typedef struct cracker_t* cracker_p;
-typedef struct cracker_t {
+typedef struct cracker_core_inst_t* cracker_core_inst_p;
+typedef struct cracker_core_inst_t {
 	uint32_t ip;
-#define IP cj->ip
+#define IP CORE_INST->ip
 
 	uint32_t ir;
-#define IR cj->ir
+#define IR CORE_INST->ir
+
+	uint32_t vr[REG_COUNT];
+#define vRx(_x) CORE_INST->vr[_x]
+#define vR(_x) vRx(rrR##_x)
+
+	uint8_t cc; /* for thumb */
+#define CCv CORE_INST->cc
+#define CCx ((IP & 1) ? CCv : ARM_IR_CC)
+
+	uint8_t rr[REG_COUNT];
+#define rRx(_x) CORE_INST->rr[_x]
+#define rR(_x) rRx(rrR##_x)
+}cracker_core_inst_t;
+
+typedef struct cracker_core_t* cracker_core_p;
+typedef struct cracker_core_t {
+	cracker_core_inst_t inst;
+#define CORE_INST (&CORE->inst)
 
 	struct {
 		uint32_t v;
 		uint8_t src:4;
 		uint8_t isPtr:1;
 	}reg[16];
-#define GPR(_x) cj->reg[_x]
+#define GPR(_x) CORE->reg[_x]
 #define vGPR(_x) GPR(_x).v
+}cracker_core_t;
 
-	uint32_t vr[REG_COUNT];
-#define vRx(_x) cj->vr[_x]
-#define vR(_x) vRx(rrR##_x)
-
-	uint8_t cc; /* for thumb */
-#define CCv cj->cc
-#define CCx ((IP & 1) ? CCv : ARM_IR_CC)
-
-	uint8_t rr[REG_COUNT];
-#define rRx(_x) cj->rr[_x]
-#define rR(_x) rRx(rrR##_x)
+typedef struct cracker_t* cracker_p;
+typedef struct cracker_t {
+	cracker_core_t core;
+#define CORE (&cj->core)
 
 	struct {
 		uint32_t base;
