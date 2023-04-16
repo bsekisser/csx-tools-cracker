@@ -277,7 +277,6 @@ static int thumb_inst_bxx_prefix(cracker_p cj)
 
 	switch(IR & 0xf800) {
 		case 0xe800:
-			return(1);
 			PC += 2;
 			return(thumb_inst_bxx__bl_blx(cj, eao_suffix, 1));
 		case 0xf800:
