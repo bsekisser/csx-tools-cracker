@@ -51,10 +51,10 @@ static uint8_t* _check_bounds(cracker_p cj, uint32_t pat, size_t size, void **p2
 		return(0);
 
 	uint8_t* target = cj->content.data + (pat - cj->content.base);
-	
+
 	if(p2ptr)
 		*p2ptr = target;
-	
+
 	return(target);
 }
 
@@ -62,7 +62,7 @@ uint32_t _read(cracker_p cj, uint32_t pat, size_t size)
 {
 	uint32_t res = 0;
 	uint8_t* src = _check_bounds(cj, pat, size, 0);
-	
+
 	if(0 == src)
 	{
 //		return(0xdeadbeef);
@@ -97,19 +97,19 @@ void symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs, symbol_p rhs)
 symbol_p symbol_find_pat(symbol_h h2sqh, uint32_t pat, symbol_h lhs, symbol_h rhs)
 {
 	symbol_p _lhs = 0, _rhs = 0, cjs = *h2sqh;
-	
+
 	if(!lhs)
 		lhs = &_lhs;
 
 	if(!rhs)
 		rhs = &_rhs;
-	
+
 	while(cjs) {
 		*rhs = (symbol_p)cjs->qelem.next;
-			
+
 		if(cjs->pat == pat)
 			return(cjs);
-			
+
 		if(cjs->pat < pat) {
 			*lhs = cjs;
 
@@ -126,10 +126,13 @@ symbol_p symbol_find_pat(symbol_h h2sqh, uint32_t pat, symbol_h lhs, symbol_h rh
 
 symbol_p symbol_next(symbol_h lhs, symbol_p cjs, symbol_h rhs)
 {
-	*lhs = cjs;
+	if(lhs)
+		*lhs = cjs;
+
 	cjs = (symbol_p)cjs->qelem.next;
 
-	*rhs = (symbol_p)(cjs ? cjs->qelem.next : 0);
+	if(rhs)
+		*rhs = (symbol_p)(cjs ? cjs->qelem.next : 0);
 
 	return(cjs);
 }
@@ -160,7 +163,7 @@ void symbol_log(cracker_p cj, symbol_p cjs)
 	if(BTST(cjs->type, SYMBOL_DATA)) {
 		uint32_t data = 0;
 		size_t size = cjs->size;
-		
+
 		if(BEXT(size, sizeof(uint32_t)))
 			data = _read(cj, cjs->pat, sizeof(uint32_t));
 		else if(BEXT(size, sizeof(uint16_t)))
@@ -178,7 +181,7 @@ void symbol_log(cracker_p cj, symbol_p cjs)
 			_LOG_(" (uint16_t (0x%04x))%s", (uint16_t)data, size ? " |" : "");
 //			_LOG_(" uint16_t%s", size ? " |" : "");
 		}
-			
+
 		if(BTST(size, sizeof(uint8_t))) {
 			_LOG_(" (uint8_t (0x%02x))", (uint8_t)data);
 //			_LOG_(" uint8_t");
@@ -219,7 +222,7 @@ void cracker_clear(cracker_p cj)
 symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size)
 {
 	symbol_h sqh = &cj->symbol_qhead;
-	
+
 	symbol_p lhs = 0, rhs = 0;
 	symbol_p cjs = symbol_find_pat(sqh, pat, &lhs, &rhs);
 
@@ -233,11 +236,11 @@ symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size)
 		cjs->refs++;
 	} else {
 		cjs = calloc(1, sizeof(symbol_t));
-		
+
 		cjs->pat = pat;
 		BSET(cjs->size, size);
 		BSET(cjs->type, SYMBOL_DATA);
-		
+
 		symbol_enqueue(sqh, lhs, cjs, rhs);
 	}
 
@@ -288,11 +291,11 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 		cjs->refs++;
 	} else {
 		cjs = calloc(1, sizeof(symbol_t));
-		
+
 		cjs->pat = pat;
 		BSET(cjs->size, sizeof(uint32_t));
 		BSET(cjs->type, SYMBOL_TEXT);
-		
+
 		symbol_enqueue(sqh, lhs, cjs, rhs);
 
 		if(0 == _check_bounds(cj, pat, sizeof(uint32_t), 0))
@@ -319,6 +322,39 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 
 /* **** */
 
+void cracker_pass(cracker_p cj, uint pass, int trace)
+{
+	cj->core.trace = !!trace;
+
+	symbol_p cjs = cj->symbol_qhead;
+
+	while(cjs) {
+		if(BTST(cjs->type, SYMBOL_TEXT)) {
+			cjs->pass++;
+
+			cracker_clear(cj);
+
+			PC = cjs->pat;
+			while(cracker_step(cj))
+				;
+		}
+
+		cjs = symbol_next(0, cjs, 0);
+
+		if(!cjs)
+			cjs = cj->symbol_qhead;
+
+		while(cjs) {
+			if(BTST(cjs->type, SYMBOL_TEXT)) {
+				if(cjs->pass <= pass)
+					break;
+			}
+
+			cjs = symbol_next(0, cjs, 0);
+		}
+	}
+}
+
 int main(void)
 {
 	int fd;
@@ -328,59 +364,26 @@ int main(void)
 	struct stat sb;
 
 	ERR(fstat(fd, &sb));
-	
+
 	void *data;
 	ERR_NULL(data = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
 
 	close(fd);
-	
+
 	cracker_t cjt, *cj = &cjt;
 
-	cj->core.trace = 1;
-	
 	cjt.content.data = data;
 	cjt.content.base = 0x10020000;
 	cjt.content.size = sb.st_size;
 	cjt.content.end = cjt.content.base + cjt.content.size;
-	
-	cracker_clear(cj);
 
-	PC = cjt.content.base;
-	
 	LOG("Loaded: " RGNFileName "_loader.bin... Start: 0x%08x, End: 0x%08x",
 		cjt.content.base, cjt.content.end);
-	
-	cjt.symbol = cracker_text(cj, PC);
-	cjt.symbol_pass = 0;
-	cjt.symbol->pass++;
 
-	while(cjt.symbol) {
-		if(!cracker_step(cj)) {
-			cracker_clear(cj);
+	symbol_p cjs = cracker_text(cj, cj->content.base);
+	cj->symbol = cjs;
 
-//			CORE_TRACE();
-			printf("\n");
-			cjt.symbol = 0;
-			symbol_p cjs = cj->symbol_qhead;
-			
-			do {
-				if(cjs) {
-					if(BTST(cjs->type, SYMBOL_TEXT)) {
-						if(!cjs->pass) {
-							cjt.symbol = cjs;
-
-							cjs->pass++;
-							PC = cjs->pat;
-						}
-					}
-					
-					cjs = (symbol_p)cjs->qelem.next;
-				} else
-					break;
-
-			}while(!cjt.symbol);
-		}
-	};
+	cracker_pass(cj, 0, 1);
 
 	CORE_TRACE("/* **** **** **** **** */");
 
