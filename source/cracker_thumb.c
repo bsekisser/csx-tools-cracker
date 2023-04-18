@@ -224,8 +224,9 @@ static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
 
 	const uint32_t new_lr = PC | 1;
 
-	CORE_TRACE("BL%s(0x%08x); /* 0x%08x + 0x%08x, LR = 0x%08x */",
-		blx ? "X" : "", new_pc & ~1, PC, eao, new_lr & ~1);
+	int splat = (new_pc == PC);
+	CORE_TRACE("BL%s(0x%08x); /* 0x%08x + %s0x%08x, LR = 0x%08x */",
+		blx ? "X" : "", new_pc & ~1, PC, splat ? "x" : "", eao, new_lr & ~1);
 
 	if(0) LOG("LR = 0x%08x, PC = 0x%08x", new_lr, new_pc);
 
@@ -236,18 +237,11 @@ static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
 	return(slr->pass);
 }
 
-static int thumb_inst_bxx_bl(cracker_p cj)
+static int thumb_inst_bxx_bl_blx(cracker_p cj)
 {
 	const uint32_t eao = mlBFMOV(IR, 10, 0, 1);
 
-	return(thumb_inst_bxx__bl_blx(cj, eao, 0));
-}
-
-static int thumb_inst_bxx_blx(cracker_p cj)
-{
-	const uint32_t eao = mlBFMOV(IR, 10, 0, 1);
-
-	return(thumb_inst_bxx__bl_blx(cj, eao, 1));
+	return(thumb_inst_bxx__bl_blx(cj, eao, 1 ^ BEXT(IR, 12)));
 }
 
 static int thumb_inst_bxx_prefix(cracker_p cj)
@@ -255,30 +249,28 @@ static int thumb_inst_bxx_prefix(cracker_p cj)
 	const int32_t eao_prefix = mlBFMOVs(IR, 10, 0, 12);
 	const uint8_t h_prefix = mlBFEXT(IR, 12, 11);
 
-	switch(h_prefix) {
-		case 0x02:
-			LR = 2 + PC + eao_prefix;
-
-			IR <<= 16;
-			IR += _read(cj, PC & ~1, sizeof(uint16_t));
-			break;
-		default:
-			LOG_ACTION(exit(-1));
+	if(2 != h_prefix) {
+		LOG_ACTION(exit(-1));
 	}
 
-	const uint32_t eao_suffix = mlBFMOV(IR, 10, 0, 1);
+	LR = 2 + PC + eao_prefix;
 
-	switch(IR & 0xf800) {
-		case 0xe800:
-			PC += 2;
-			return(thumb_inst_bxx__bl_blx(cj, eao_suffix, 1));
-		case 0xf800:
-			PC += 2;
-			return(thumb_inst_bxx__bl_blx(cj, eao_suffix, 0));
-		default:
-			CORE_TRACE("/* xxx -- LR = 0x%08x + 0x%03x = 0x%08x */", PC, eao_prefix, LR);
-			return(0);
+	const uint32_t ir_suffix = _read(cj, PC & ~1, sizeof(uint16_t));
+	if(0xe800 == (ir_suffix & 0xe800)) {
+		const int blx = 1 ^ BEXT(ir_suffix, 12);
+		
+		if(blx && (ir_suffix & 1))
+			goto return_not_prefix_suffix;
+		
+		IR = (IR << 16) | ir_suffix;
+		PC += 2;
+		
+		return(thumb_inst_bxx_bl_blx(cj));
 	}
+
+return_not_prefix_suffix:
+	CORE_TRACE("BL/BLX(0x%08x) /* LR = 0x%08x */", eao_prefix, LR);
+	return(0);
 }
 
 static int thumb_inst_dpr_rms_rdn(cracker_p cj)
@@ -615,13 +607,13 @@ static int thumb_step_group7_e000_ffff(cracker_p cj)
 		case 0xe000:
 			return(thumb_inst_b(cj));
 		case 0xe800:
-			if(0 == (IR & 1))
-				return(thumb_inst_bxx_blx(cj));
-			break;
+			if(IR & 1)
+				return(0);
+			__attribute__((fallthrough));
+		case 0xf800:
+			return(thumb_inst_bxx_bl_blx(cj));
 		case 0xf000:
 			return(thumb_inst_bxx_prefix(cj));
-		case 0xf800:
-			return(thumb_inst_bxx_bl(cj));
 	}
 
 	LOG_ACTION(return(thumb_step__fail_decode(cj, 1)));
