@@ -141,7 +141,7 @@ void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
 	do {
 		cracker_symbol_log(cj, cjs);
 
-		cjs = (symbol_p)cjs->qelem.next;
+		cjs = symbol_nex(0, cjs, 0);
 	}while(cjs);
 }
 
@@ -177,12 +177,7 @@ symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size)
 
 		cjs->refs++;
 	} else {
-		cjs = calloc(1, sizeof(symbol_t));
-
-		cjs->pat = pat;
-		BSET(cjs->size, size);
-		BSET(cjs->type, SYMBOL_DATA);
-
+		cjs = symbol_new(pat, size, SYMBOL_DATA);
 		symbol_enqueue(sqh, lhs, cjs, rhs);
 	}
 
@@ -232,12 +227,7 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 
 		cjs->refs++;
 	} else {
-		cjs = calloc(1, sizeof(symbol_t));
-
-		cjs->pat = pat;
-		BSET(cjs->size, sizeof(uint32_t));
-		BSET(cjs->type, SYMBOL_TEXT);
-
+		cjs = symbol_new(pat, sizeof(uint32_t), SYMBOL_TEXT);
 		symbol_enqueue(sqh, lhs, cjs, rhs);
 
 		if(0 == _check_bounds(cj, pat, sizeof(uint32_t), 0))

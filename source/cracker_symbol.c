@@ -54,6 +54,17 @@ symbol_p symbol_find_pat(symbol_h h2sqh, uint32_t pat, symbol_h lhs, symbol_h rh
 	return(0);
 }
 
+symbol_p symbol_new(uint32_t pat, size_t size, uint type)
+{
+	symbol_p cjs = calloc(1, sizeof(symbol_t));
+	
+	cjs->pat = pat;
+	BSET(cjs->size, size);
+	BSET(cjs->type, type);
+
+	return(cjs);
+}
+
 symbol_p symbol_next(symbol_h lhs, symbol_p cjs, symbol_h rhs)
 {
 	if(lhs)
