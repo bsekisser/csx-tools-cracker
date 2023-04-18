@@ -64,7 +64,7 @@ static int thumb_inst_add_sub_rn_rd(cracker_p cj)
 {
 	const int bit_i = BEXT(IR, 10);
 	const uint8_t op2 = BEXT(IR, 9);
-	const char* ops[2] = { "SUBS", "ADDS" };
+	const char* ops[2] = { "ADDS", "SUBS" };
 
 	if(bit_i)
 		setup_rR_vR(M, ~0, mlBFEXT(IR, 8, 6));
@@ -74,29 +74,22 @@ static int thumb_inst_add_sub_rn_rd(cracker_p cj)
 	setup_rR_vR_src(N, mlBFEXT(IR, 5, 3));
 	setup_rR_dst_src(D, mlBFEXT(IR, 2, 0), rR(N));
 
-	if(bit_i && op2 && (0 == vR(M))) {
-		CORE_TRACE_START("MOV(%s, %s", reg_name[rR(D)],
-			reg_name[rR(N)]);
-	} else {
-		CORE_TRACE_START("%s(%s, %s, ", ops[op2], reg_name[rR(D)],
-			reg_name[rR(N)]);
-	}
+	CORE_TRACE_START("%s(%s, %s, ", ops[op2], reg_name[rR(D)],
+		reg_name[rR(N)]);
 
 	if(bit_i) {
-		if(!op2 || vR(M)) {
-			_CORE_TRACE_("0x%01x", vR(M));
-		}
+		_CORE_TRACE_("0x%01x", vR(M));
 	} else {
 		_CORE_TRACE_("%s", reg_name[rR(M)]);
 	}
 
 	if((rPC == rR_SRC(N)) && bit_i && vR(M)) {
-		uint8_t aluop[2] = { ARM_SUB, ARM_ADD };
+		uint8_t aluop[2] = { ARM_ADD, ARM_SUB };
 		
 		vR(D) = alubox(aluop[op2], vR(N), vR(M));
 		vGPR_rR(D) = vR(D);
 		
-		const char aluopc[2] = { '-', '+' };
+		const char aluopc[2] = { '+', '-' };
 		
 		_CORE_TRACE_("); /* 0x%08x %c 0x%08x = 0x%08x */ XXX",
 			vR(N), aluopc[op2], vR(M), vR(D));
