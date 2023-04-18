@@ -335,6 +335,8 @@ int main(void)
 	close(fd);
 	
 	cracker_t cjt, *cj = &cjt;
+
+	cj->core.trace = 1;
 	
 	cjt.content.data = data;
 	cjt.content.base = 0x10020000;

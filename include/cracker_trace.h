@@ -1,7 +1,10 @@
 #include <stdio.h>
 
 #define _CORE_TRACE_(_f, ...) \
-		printf(_f, ##__VA_ARGS__);
+	({ \
+		if(cj->core.trace) \
+			printf(_f, ##__VA_ARGS__); \
+	})
 
 #define CORE_TRACE(_f, ...) \
 	({ \

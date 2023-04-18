@@ -87,6 +87,13 @@ typedef struct cracker_core_t {
 	}reg[16];
 #define GPR(_x) CORE->reg[_x]
 #define vGPR(_x) GPR(_x).v
+
+	union {
+		uint _flags;
+		struct {
+			uint trace:1;
+		};
+	};
 }cracker_core_t;
 
 typedef struct cracker_t* cracker_p;
