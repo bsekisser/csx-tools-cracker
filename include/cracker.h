@@ -40,10 +40,10 @@ typedef struct symbol_t* symbol_p;
 typedef struct symbol_t {
 	qelem_t qelem;
 
-//	uint32_t end_pat;
-	uint flags;
-	uint pass;
 	uint32_t pat;
+	uint32_t end_pat;
+
+	uint pass;
 	uint refs;
 	struct {
 		uint dst;
@@ -51,6 +51,14 @@ typedef struct symbol_t {
 	}reg;
 	size_t size;
 	uint type;
+
+	union {
+		uint _flags;
+		struct {
+			uint in_bounds:1;
+			uint thumb:1;
+		};
+	};
 }symbol_t;
 
 typedef struct cracker_core_inst_t* cracker_core_inst_p;
