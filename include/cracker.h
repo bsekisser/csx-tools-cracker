@@ -143,7 +143,10 @@ uint32_t _read(cracker_p cj, uint32_t pat, size_t size);
 symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size);
 void cracker_reg_dst(cracker_p cj, uint8_t r);
 void cracker_reg_src(cracker_p cj, uint8_t r);
+int cracker_step(cracker_p cj);
 symbol_p cracker_text(cracker_p cj, uint32_t pat);
+symbol_p cracker_text_end(cracker_p cj, uint32_t pat);
+int cracker_text_end_if(cracker_p cj, uint32_t pat, int end);
 
 /* **** */
 
