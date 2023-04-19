@@ -3,7 +3,12 @@
 
 /* **** */
 
+#include "bitfield.h"
+
+/* **** */
+
 #include <assert.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /* **** */ 

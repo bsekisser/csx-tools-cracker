@@ -141,7 +141,7 @@ void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
 	do {
 		cracker_symbol_log(cj, cjs);
 
-		cjs = symbol_nex(0, cjs, 0);
+		cjs = symbol_next(0, cjs, 0);
 	}while(cjs);
 }
 

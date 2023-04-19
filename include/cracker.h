@@ -2,7 +2,6 @@
 
 /* **** */
 
-//#include "../../../include/queue.h"
 #include "queue.h"
 
 /* **** */
