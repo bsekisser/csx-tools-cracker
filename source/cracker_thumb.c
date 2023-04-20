@@ -186,7 +186,8 @@ static int thumb_inst_bcc(cracker_p cj)
 	
 	symbol_p slr = cracker_text(cj, PC | 1);
 
-	return(slr->pass);
+//	return(slr->pass);
+	return(1);
 }
 
 static int thumb_inst_bx_blx(cracker_p cj)
@@ -210,7 +211,7 @@ static int thumb_inst_bx_blx(cracker_p cj)
 	if(link) {
 		symbol_p slr = cracker_text(cj, PC);
 
-		return(slr->pass);
+//		return(slr->pass);
 	}
 
 	return(0);
@@ -234,7 +235,8 @@ static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
 
 	cracker_text(cj, new_pc);
 	
-	return(slr->pass);
+//	return(slr->pass);
+	return(0);
 }
 
 static int thumb_inst_bxx_bl_blx(cracker_p cj)

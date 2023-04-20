@@ -58,9 +58,12 @@ static int arm_inst_b_bl(cracker_p cj)
 	const int32_t offset = mlBFMOVs(IR, 23, 0, 2);
 	
 	const int link = blx || (!blx && hl);
-	const uint32_t new_pc = ARM_PC + offset;
+	const uint32_t new_pc = (ARM_PC + offset) + (blx ? ((hl << 1) | 1): 0);
 
-	CORE_TRACE("B%s%s(0x%08x)", link ? "L" : "", blx ? "X" : "", new_pc);
+	int splat = (new_pc == PC);
+	CORE_TRACE("B%s%s(0x%08x) /* %c(%s0x%08x) */",
+		link ? "L" : "", blx ? "X" : "", new_pc & 1,
+		blx ? 'T' : 'A', splat ? "x" : "", offset);
 
 	cracker_text(cj, new_pc);
 
@@ -77,21 +80,28 @@ static int arm_inst_bx(cracker_p cj)
 	assert(0xf == mlBFEXT(IR, 15, 12));
 	assert(0xf == mlBFEXT(IR, 11, 8));
 
+	const int link = BEXT(IR, 5);
+
 	setup_rR_vR_src(M, ARM_IR_RM);
+
 
 	CORE_TRACE_START();
 
 	_CORE_TRACE_("BX(%s)", rR_NAME(M));
 
 	if(rPC == rR_SRC(M)) {
-		_CORE_TRACE_("; /* 0x%08x */", vR(M));
+		_CORE_TRACE_("; /* %c(0x%08x) */", vR(M) & 1 ? 'T' : 'A', vR(M));
 
 		cracker_text(cj, vR(M));
 	}
 
+	if(link || (CC_AL != ARM_IR_CC))
+		cracker_text(cj, PC);
+
+
 	CORE_TRACE_END();
 		
-	return(cracker_text_end_if(cj, IP, (CC_AL != ARM_IR_CC)));
+	return(cracker_text_end_if(cj, IP, (CC_AL == ARM_IR_CC)));
 }
 
 static int arm_inst_cdp_mcr_mrc(cracker_p cj)
