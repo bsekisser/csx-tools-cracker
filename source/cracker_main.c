@@ -126,6 +126,7 @@ void cracker_pass(cracker_p cj, uint pass, int trace)
 {
 	printf("\n\n/* pass %u **** **** **** **** */\n\n", pass);
 
+	cracker_clear(cj);
 	cj->core.trace = !!trace;
 	cj->new_symbol = 0;
 	cj->symbols_added = 0;
@@ -140,13 +141,14 @@ void cracker_pass(cracker_p cj, uint pass, int trace)
 			cjs->pass = pass;
 
 			if(BTST(cjs->type, SYMBOL_TEXT)) {
-				cracker_clear(cj);
-
 				cj->symbol = cjs;
 				PC = cjs->pat;
-				while(PC <= cjs->end_pat)
-					if(!cracker_step(cj))
+				while(PC <= cjs->end_pat) {
+					if(!cracker_step(cj)) {
+						cracker_clear(cj);
 						break;
+					}
+				}
 
 				if(trace)
 					printf("\n");
@@ -249,15 +251,17 @@ void cracker_symbol__log_text(cracker_p cj, symbol_p cjs)
 
 	LOG_END(", TEXT ENTRY");
 
-	cracker_clear(cj);
+	if(cjs->in_bounds) {
+		PC = cjs->pat;
+		while(PC <= cjs->end_pat) {
+			if(!cracker_step(cj)) {
+				cracker_clear(cj);
+				break;
+			}
+		}
 
-	PC = cjs->pat;
-	while(PC <= cjs->end_pat) {
-		if(!cracker_step(cj))
-			break;
+		printf("\n");
 	}
-
-	printf("\n");
 
 	UNUSED(cj);
 }
@@ -351,6 +355,12 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 	return(cjs);
 }
 
+void cracker_text_branch_link(cracker_p cj, uint32_t new_lr)
+{
+	symbol_p slr = cracker_text(cj, new_lr);
+	slr->pass = cj->symbol_pass;
+}
+
 symbol_p cracker_text_end(cracker_p cj, uint32_t pat)
 {
 	symbol_h sqh = &cj->symbol_qhead;
@@ -411,6 +421,7 @@ int main(void)
 
 	printf("\n\n/* **** **** **** **** */\n\n");
 
+	cracker_clear(cj);
 	cracker_symbol_queue_log(cj, cj->symbol_qhead);
 
 	munmap(data, sb.st_size);

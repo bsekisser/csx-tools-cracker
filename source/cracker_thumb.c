@@ -178,15 +178,15 @@ static int thumb_inst_bcc(cracker_p cj)
 	CCv = mlBFEXT(IR, 11, 8);
 	const int32_t imm8 = mlBFMOVs(IR, 7, 0, 1);
 
-	const uint32_t new_pc = THUMB_PC + imm8;
+	const uint32_t new_pc = (THUMB_PC + imm8) | 1;
 
 	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x */", new_pc & ~1, THUMB_PC, imm8);
 
-	cracker_text(cj, new_pc | 1);
-	
-	symbol_p slr = cracker_text(cj, PC | 1);
+	cracker_text(cj, new_pc);
 
-//	return(slr->pass);
+	const uint32_t new_lr = PC | 1;
+	cracker_text_branch_link(cj, new_lr);
+
 	return(1);
 }
 
@@ -199,7 +199,7 @@ static int thumb_inst_bx_blx(cracker_p cj)
 	CORE_TRACE_START();
 	
 	_CORE_TRACE_("B%sX(%s)", link ? "L" : "", rR_NAME(M));
-	
+
 	if(rPC == rR_SRC(M)) {
 		_CORE_TRACE_("; /* 0x%08x */", vR(M));
 
@@ -209,9 +209,10 @@ static int thumb_inst_bx_blx(cracker_p cj)
 	CORE_TRACE_END();
 
 	if(link) {
-		symbol_p slr = cracker_text(cj, PC);
-
-//		return(slr->pass);
+		const uint32_t new_lr = PC | 1;
+		cracker_text_branch_link(cj, new_lr);
+		
+		return(1);
 	}
 
 	return(0);
@@ -231,12 +232,10 @@ static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
 
 	if(0) LOG("LR = 0x%08x, PC = 0x%08x", new_lr, new_pc);
 
-	symbol_p slr = cracker_text(cj, new_lr);
-
+	cracker_text_branch_link(cj, new_lr);
 	cracker_text(cj, new_pc);
-	
-//	return(slr->pass);
-	return(0);
+
+	return(1);
 }
 
 static int thumb_inst_bxx_bl_blx(cracker_p cj)
@@ -531,6 +530,7 @@ static int thumb_step__fail_decode(cracker_p cj, int crap)
 	if(crap)
 		LOG_ACTION(exit(-1));
 
+	cracker_text_end(cj, IP);
 	return(0);
 }
 
@@ -610,7 +610,7 @@ static int thumb_step_group7_e000_ffff(cracker_p cj)
 			return(thumb_inst_b(cj));
 		case 0xe800:
 			if(IR & 1)
-				return(0);
+				break;
 			__attribute__((fallthrough));
 		case 0xf800:
 			return(thumb_inst_bxx_bl_blx(cj));
