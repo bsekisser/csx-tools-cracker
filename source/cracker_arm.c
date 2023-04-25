@@ -68,10 +68,8 @@ static int arm_inst_b_bl(cracker_p cj)
 
 	cracker_text(cj, new_pc);
 
-	if(link || (CC_AL != ARM_IR_CC)) {
-		cracker_text_branch_link(cj, PC);
-		return(1);
-	}
+	if(link || (CC_AL != ARM_IR_CC))
+		return(cracker_text_branch_link(cj, PC));
 
 	return(0);
 }
@@ -98,11 +96,8 @@ static int arm_inst_bx(cracker_p cj)
 
 	CORE_TRACE_END();
 
-	if(link || (CC_AL != ARM_IR_CC)) {
-		cracker_text_branch_link(cj, PC);
-
-		return(1);
-	}
+	if(link || (CC_AL != ARM_IR_CC))
+		return(cracker_text_branch_link(cj, PC));
 
 	
 	return(0);

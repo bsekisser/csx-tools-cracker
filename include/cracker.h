@@ -161,7 +161,7 @@ void cracker_reg_src(cracker_p cj, uint8_t r);
 int cracker_step(cracker_p cj);
 void cracker_symbol_end(symbol_p cjs, uint32_t pat, const char* name);
 symbol_p cracker_text(cracker_p cj, uint32_t pat);
-void cracker_text_branch_link(cracker_p cj, uint32_t new_lr);
+int cracker_text_branch_link(cracker_p cj, uint32_t new_lr);
 symbol_p cracker_text_end(cracker_p cj, uint32_t pat);
 int cracker_text_end_if(cracker_p cj, uint32_t pat, int end);
 

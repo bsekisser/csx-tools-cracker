@@ -185,9 +185,7 @@ static int thumb_inst_bcc(cracker_p cj)
 	cracker_text(cj, new_pc);
 
 	const uint32_t new_lr = PC | 1;
-	cracker_text_branch_link(cj, new_lr);
-
-	return(1);
+	return(cracker_text_branch_link(cj, new_lr));
 }
 
 static int thumb_inst_bx_blx(cracker_p cj)
@@ -210,9 +208,7 @@ static int thumb_inst_bx_blx(cracker_p cj)
 
 	if(link) {
 		const uint32_t new_lr = PC | 1;
-		cracker_text_branch_link(cj, new_lr);
-		
-		return(1);
+		return(cracker_text_branch_link(cj, new_lr));
 	}
 
 	return(0);
@@ -232,10 +228,9 @@ static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
 
 	if(0) LOG("LR = 0x%08x, PC = 0x%08x", new_lr, new_pc);
 
-	cracker_text_branch_link(cj, new_lr);
 	cracker_text(cj, new_pc);
 
-	return(1);
+	return(cracker_text_branch_link(cj, new_lr));
 }
 
 static int thumb_inst_bxx_bl_blx(cracker_p cj)

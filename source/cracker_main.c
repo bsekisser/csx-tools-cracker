@@ -355,10 +355,16 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 	return(cjs);
 }
 
-void cracker_text_branch_link(cracker_p cj, uint32_t new_lr)
+int cracker_text_branch_link(cracker_p cj, uint32_t new_lr)
 {
 	symbol_p slr = cracker_text(cj, new_lr);
-	slr->pass = cj->symbol_pass;
+
+	if(1) {
+		slr->pass = cj->symbol_pass;
+		return(1);
+	}
+
+	return(0);
 }
 
 symbol_p cracker_text_end(cracker_p cj, uint32_t pat)
