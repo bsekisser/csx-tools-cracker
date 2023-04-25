@@ -55,16 +55,15 @@ static int arm_inst_b_bl(cracker_p cj)
 {
 	const int blx = (CC_NV == ARM_IR_CC);
 	const int hl = BEXT(IR, 24);
-	const int32_t offset = mlBFMOVs(IR, 23, 0, 2);
+	const int32_t offset = mlBFMOVs(IR, 23, 0, 2)
+		+ (blx ? ((hl << 1) | 1) : 0);
 	
 	const int link = blx || (!blx && hl);
-	const uint32_t new_pc = ((ARM_PC + offset)
-		+ (blx ? ((hl << 1) | 1): 0))
-		& (~4 >> blx);
+	const uint32_t new_pc = (ARM_PC + offset);
 
 	int splat = (new_pc == PC);
 	CORE_TRACE("B%s%s(0x%08x) /* %c(%s0x%08x) */",
-		link ? "L" : "", blx ? "X" : "", new_pc,
+		link ? "L" : "", blx ? "X" : "", new_pc & (~3 >> blx),
 		blx ? 'T' : 'A', splat ? "x" : "", offset);
 
 	cracker_text(cj, new_pc);
