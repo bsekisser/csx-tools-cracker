@@ -420,7 +420,7 @@ static int arm_inst_ldst_sh_immediate_offset(cracker_p cj)
 
 	if(rPC == rR_SRC(N)) {
 		const uint32_t pat = vR(N) + offset;
-		const size_t size = 1 << ARM_IR_LDST_SH_FLAG_H;
+		const size_t size = ARM_IR_LDST_SH_FLAG_D ? 8 : (ARM_IR_LDST_SH_FLAG_H ? 2 : 1);
 
 		cracker_data(cj, pat, size);
 
