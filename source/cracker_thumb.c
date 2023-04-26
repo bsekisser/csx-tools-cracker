@@ -83,6 +83,8 @@ static int thumb_inst_add_sub_rn_rd(cracker_p cj)
 		_CORE_TRACE_("%s", reg_name[rR(M)]);
 	}
 
+	_CORE_TRACE_(")");
+
 	if((rPC == rR_SRC(N)) && bit_i && vR(M)) {
 		uint8_t aluop[2] = { ARM_ADD, ARM_SUB };
 		
@@ -91,7 +93,7 @@ static int thumb_inst_add_sub_rn_rd(cracker_p cj)
 		
 		const char aluopc[2] = { '+', '-' };
 		
-		_CORE_TRACE_("); /* 0x%08x %c 0x%08x = 0x%08x */ XXX",
+		_CORE_TRACE_("; /* 0x%08x %c 0x%08x = 0x%08x */ XXX",
 			vR(N), aluopc[op2], vR(M), vR(D));
 	}
 
