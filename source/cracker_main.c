@@ -98,13 +98,10 @@ symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size)
 {
 	symbol_h sqh = &cj->symbol_qhead;
 
-	symbol_p lhs = 0, rhs = 0;
-	symbol_p cjs = symbol_find_pat(sqh, pat, &lhs, &rhs);
+	symbol_p lhs = 0;
+	symbol_p cjs = symbol_find_pat(sqh, &lhs, pat, ~0U);
 
 	if(cjs) {
-//		assert(BTST(cjs->size, size));
-//		assert(BTST(cjs->type, SYMBOL_DATA));
-
 		BSET(cjs->size, size);
 		BSET(cjs->type, SYMBOL_DATA);
 
@@ -112,10 +109,10 @@ symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size)
 	} else {
 		cj->symbol_count.data++;
 		
-		cracker_symbol_end(lhs, pat, "lhs");
+		cracker_symbol_end(lhs, pat, "cracker_data -- lhs");
 		
 		cjs = symbol_new(pat, size, SYMBOL_DATA);
-		symbol_enqueue(sqh, lhs, cjs, rhs);
+		symbol_enqueue(sqh, lhs, cjs);
 		cj->new_symbol = 1;
 	}
 
@@ -156,7 +153,7 @@ void cracker_pass(cracker_p cj, uint pass, int trace)
 
 		}
 
-		cjs = symbol_next(0, cjs, 0);
+		cjs = symbol_next(0, cjs);
 		pass_symbol_count++;
 	}
 
@@ -310,7 +307,7 @@ void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
 	do {
 		cracker_symbol_log(cj, cjs);
 
-		cjs = symbol_next(0, cjs, 0);
+		cjs = symbol_next(0, cjs);
 	}while(cjs);
 }
 
@@ -318,20 +315,14 @@ void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
 
 symbol_p cracker_text(cracker_p cj, uint32_t pat)
 {
-//	const uint32_t pat_thumb = pat & ~1U;
 	const int thumb = pat & 1;
-
-//	pat &= ~1;
 
 	symbol_h sqh = &cj->symbol_qhead;
 
-	symbol_p lhs = 0, rhs = 0;
-	symbol_p cjs = symbol_find_pat(sqh, pat, &lhs, &rhs);
+	symbol_p lhs = 0;
+	symbol_p cjs = symbol_find_pat(sqh, &lhs, pat, ~1U);
 
 	if(cjs) {
-//		assert(BTST(cjs->size, sizeof(uint32_t)));
-//		assert(BTST(cjs->type, SYMBOL_TEXT));
-
 		BSET(cjs->size, sizeof(uint32_t));
 		BSET(cjs->type, SYMBOL_TEXT);
 
@@ -341,10 +332,10 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 
 //		LOG("pat = %c(0x%08x)", thumb ? 'T' : 'A', pat);
 
-		cracker_symbol_end(lhs, pat, "lhs");
+		cracker_symbol_end(lhs, pat, "cracker_text -- lhs");
 
 		cjs = symbol_new(pat, sizeof(uint32_t), SYMBOL_TEXT);
-		symbol_enqueue(sqh, lhs, cjs, rhs);
+		symbol_enqueue(sqh, lhs, cjs);
 		cj->new_symbol = 1;
 
 		cjs->end_pat = ~0U;
@@ -371,11 +362,11 @@ symbol_p cracker_text_end(cracker_p cj, uint32_t pat)
 {
 	symbol_h sqh = &cj->symbol_qhead;
 
-	symbol_p lhs = 0, rhs = 0;
-	symbol_p cjs = symbol_find_pat(sqh, pat, &lhs, &rhs);
+	symbol_p lhs = 0;
+	symbol_p cjs = symbol_find_pat(sqh, &lhs, pat, ~1U);
 
-	cracker_symbol_end(lhs, pat, "lhs");
-	cracker_symbol_end(cjs, pat, "cjs");
+	cracker_symbol_end(lhs, pat, "cracker_text_end -- lhs");
+	cracker_symbol_end(cjs, pat, "cracker_text_end -- cjs");
 
 	return(cjs);
 }

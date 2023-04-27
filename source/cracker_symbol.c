@@ -13,47 +13,43 @@
 
 /* **** */ 
 
-void symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs, symbol_p rhs)
+void symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs)
 {
-	if(lhs) {
-		assert(lhs->pat < cjs->pat);
-		lhs->qelem.next = (void*)cjs;
-	}
-
-	if(!(*h2sqh))
-		*h2sqh = cjs;
+	const symbol_p sqh = *h2sqh;
+	const symbol_p rhs = lhs ? ((symbol_p)lhs->qelem.next) : sqh;
 
 	if(rhs)
 		assert(rhs->pat > cjs->pat);
 
 	cjs->qelem.next = (void*)rhs;
+
+	if(lhs) {
+		assert(lhs->pat < cjs->pat);
+		lhs->qelem.next = (void*)cjs;
+	}
+
+	if((0 == sqh) || (0 == lhs))
+		*h2sqh = cjs;
 }
 
-symbol_p symbol_find_pat(symbol_h h2sqh, uint32_t pat, symbol_h lhs, symbol_h rhs)
+symbol_p symbol_find_pat(symbol_h h2sqh, symbol_h h2lhs, uint32_t pat, uint32_t mask)
 {
-	symbol_p _lhs = 0, _rhs = 0, cjs = *h2sqh;
+	assert(0 != h2sqh);
+	
+	symbol_p rhs = *h2sqh;
 
-	if(!lhs)
-		lhs = &_lhs;
+	const uint32_t masked_pat = pat & mask;
 
-	if(!rhs)
-		rhs = &_rhs;
+	while(rhs) {
+		if(masked_pat == (rhs->pat & mask))
+			return(rhs);
+		if(masked_pat < (rhs->pat & mask))
+			return(0);
 
-	while(cjs) {
-		*rhs = (symbol_p)cjs->qelem.next;
+		if(h2lhs)
+			*h2lhs = rhs;
 
-		if(cjs->pat == pat)
-			return(cjs);
-
-		if(cjs->pat < pat) {
-			*lhs = cjs;
-
-			if(*rhs && ((*rhs)->pat > pat))
-				return(0);
-
-		}
-
-		cjs = *rhs;
+		rhs = (symbol_p)rhs->qelem.next;
 	}
 
 	return(0);
@@ -61,7 +57,7 @@ symbol_p symbol_find_pat(symbol_h h2sqh, uint32_t pat, symbol_h lhs, symbol_h rh
 
 symbol_p symbol_new(uint32_t pat, size_t size, uint type)
 {
-	symbol_p cjs = calloc(1, sizeof(symbol_t));
+	const symbol_p cjs = calloc(1, sizeof(symbol_t));
 	
 	cjs->pat = pat;
 	BSET(cjs->size, size);
@@ -70,15 +66,14 @@ symbol_p symbol_new(uint32_t pat, size_t size, uint type)
 	return(cjs);
 }
 
-symbol_p symbol_next(symbol_h lhs, symbol_p cjs, symbol_h rhs)
+symbol_p symbol_next(symbol_h h2lhs, symbol_p cjs)
 {
-	if(lhs)
-		*lhs = cjs;
+	assert(0 != cjs);
+
+	if(h2lhs)
+		*h2lhs = cjs;
 
 	cjs = (symbol_p)cjs->qelem.next;
-
-	if(rhs)
-		*rhs = (symbol_p)(cjs ? cjs->qelem.next : 0);
 
 	return(cjs);
 }
