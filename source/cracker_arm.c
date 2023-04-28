@@ -99,7 +99,6 @@ static int arm_inst_bx(cracker_p cj)
 	if(link || (CC_AL != ARM_IR_CC))
 		return(cracker_text_branch_link(cj, PC));
 
-	
 	return(0);
 }
 

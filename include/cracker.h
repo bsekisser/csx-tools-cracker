@@ -120,16 +120,15 @@ typedef struct cracker_t {
 	symbol_p symbol_qhead;
 
 	struct {
+			uint added;
 			uint data;
 			uint text;
 	}symbol_count;
 
-	uint symbols_added;
-
 	union {
 		uint _flags;
 		struct {
-			uint new_symbol:1;
+			uint collect_refs:1;
 			uint trace:1;
 		};
 	};
