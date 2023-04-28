@@ -125,7 +125,7 @@ static void cracker_pass_step(cracker_p cj, symbol_p cjs, int trace)
 	if(0 == cjs->in_bounds)
 		return;
 
-	if(cjs->pass >= cj->symbol_pass)
+	if(cj->symbol_pass && (cjs->pass >= cj->symbol_pass))
 		return;
 
 	cjs->pass = cj->symbol_pass;
@@ -319,6 +319,7 @@ void cracker_symbol_log(cracker_p cj, symbol_p cjs)
 
 void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
 {
+	cj->collect_refs = 0;
 	cj->core.trace = 1;
 
 	symbol_p cjs = sqh;
@@ -369,7 +370,7 @@ int cracker_text_branch_link(cracker_p cj, uint32_t new_lr)
 	symbol_p slr = cracker_text(cj, new_lr);
 
 	if(1) {
-		slr->pass = cj->symbol_pass;
+//		slr->pass = cj->symbol_pass;
 		return(1);
 	}
 
@@ -427,9 +428,14 @@ int main(void)
 	symbol_p cjs = cracker_text(cj, cj->content.base);
 	cj->symbol = cjs;
 
-//	for(cj->symbol_pass = 1; cj->symbol_count.added; cj->symbol_pass++)
-	for(cj->symbol_pass = 1; cj->symbol_pass <= 3; cj->symbol_pass++)
+	for(cj->symbol_pass = 1; cj->symbol_count.added; cj->symbol_pass++)
+//	for(cj->symbol_pass = 1; cj->symbol_pass <= 3; cj->symbol_pass++)
 		cracker_pass(cj, 0);
+
+	cj->collect_refs = 1;
+	cj->symbol_pass = 0;
+
+	cracker_pass(cj, 0);
 
 	CORE_TRACE("/* **** **** **** **** */");
 
