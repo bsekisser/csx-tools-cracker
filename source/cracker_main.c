@@ -146,6 +146,14 @@ static void cracker_pass_step(cracker_p cj, symbol_p cjs, int trace)
 		printf("\n");
 }
 
+uint32_t cracker_data_ptr_read(cracker_p cj, uint32_t pat, size_t size)
+{
+	cracker_data(cj, pat, sizeof(uint32_t));
+	pat = _read(cj, pat, sizeof(uint32_t));
+	cracker_data(cj, pat, size);
+	return(_read(cj, pat, size));
+}
+
 void cracker_pass(cracker_p cj, int trace)
 {
 	printf("\n\n/* pass %u **** **** **** **** */\n\n", cj->symbol_pass);
@@ -367,12 +375,7 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 
 int cracker_text_branch_link(cracker_p cj, uint32_t new_lr)
 {
-	symbol_p slr = cracker_text(cj, new_lr);
-
-	if(1) {
-//		slr->pass = cj->symbol_pass;
-		return(1);
-	}
+	cracker_text(cj, new_lr);
 
 	return(0);
 }
@@ -396,53 +399,4 @@ int cracker_text_end_if(cracker_p cj, uint32_t pat, int end)
 		cracker_text_end(cj, pat);
 	
 	return(!end);
-}
-
-/* **** */
-
-int main(void)
-{
-	int fd;
-//	ERR(fd = open(RGNDirPath RGNFileName "_loader.bin", O_RDONLY));
-	ERR(fd = open(RGNDirPath RGNFileName "_firmware.bin", O_RDONLY));
-
-	struct stat sb;
-
-	ERR(fstat(fd, &sb));
-
-	void *data;
-	ERR_NULL(data = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
-
-	close(fd);
-
-	cracker_t cjt, *cj = &cjt;
-
-	cjt.content.data = data;
-	cjt.content.base = 0x10020000;
-	cjt.content.size = sb.st_size;
-	cjt.content.end = cjt.content.base + cjt.content.size;
-
-	LOG("Loaded: " RGNFileName "_loader.bin... Start: 0x%08x, End: 0x%08x",
-		cjt.content.base, cjt.content.end);
-
-	symbol_p cjs = cracker_text(cj, cj->content.base);
-	cj->symbol = cjs;
-
-	for(cj->symbol_pass = 1; cj->symbol_count.added; cj->symbol_pass++)
-//	for(cj->symbol_pass = 1; cj->symbol_pass <= 3; cj->symbol_pass++)
-		cracker_pass(cj, 0);
-
-	cj->collect_refs = 1;
-	cj->symbol_pass = 0;
-
-	cracker_pass(cj, 0);
-
-	CORE_TRACE("/* **** **** **** **** */");
-
-	printf("\n\n/* **** **** **** **** */\n\n");
-
-	cracker_clear(cj);
-	cracker_symbol_queue_log(cj, cj->symbol_qhead);
-
-	munmap(data, sb.st_size);
 }

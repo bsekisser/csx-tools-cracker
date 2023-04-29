@@ -103,17 +103,21 @@ typedef struct cracker_core_t {
 	};
 }cracker_core_t;
 
+
+typedef struct cracker_content_t* cracker_content_p;
+typedef struct cracker_content_t {
+		uint32_t base;
+		void* data;
+		uint32_t end;
+		size_t size;
+}cracker_content_t;
+
 typedef struct cracker_t* cracker_p;
 typedef struct cracker_t {
 	cracker_core_t core;
 #define CORE (&cj->core)
 
-	struct {
-		uint32_t base;
-		void* data;
-		uint32_t end;
-		size_t size;
-	}content;
+	cracker_content_t content;
 
 	symbol_p symbol;
 	uint symbol_pass;
@@ -154,11 +158,15 @@ typedef struct cracker_t {
 /* **** */
 
 uint32_t _read(cracker_p cj, uint32_t pat, size_t size);
+void cracker_clear(cracker_p cj);
 symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size);
+uint32_t cracker_data_ptr_read(cracker_p cj, uint32_t pat, size_t size);
+void cracker_pass(cracker_p cj, int trace);
 void cracker_reg_dst(cracker_p cj, uint8_t r);
 void cracker_reg_src(cracker_p cj, uint8_t r);
 int cracker_step(cracker_p cj);
 void cracker_symbol_end(symbol_p cjs, uint32_t pat, const char* name);
+void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh);
 symbol_p cracker_text(cracker_p cj, uint32_t pat);
 int cracker_text_branch_link(cracker_p cj, uint32_t new_lr);
 symbol_p cracker_text_end(cracker_p cj, uint32_t pat);
