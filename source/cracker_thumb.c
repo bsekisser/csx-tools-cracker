@@ -35,7 +35,7 @@ static int thumb_inst_add_rd_pcsp_i(cracker_p cj)
 	const uint16_t imm8 = mlBFMOV(IR, 7, 0, 2);
 	const int is_sp = BEXT(IR, 11);
 	
-	setup_rR_vR(N, is_sp ? rSP : rPC, is_sp ? 0 : THUMB_PC);
+	setup_rR_vR(N, is_sp ? rSP : rPC, is_sp ? 0 : (THUMB_PC & ~3U));
 	
 	setup_rR_dst_src(D, mlBFEXT(IR, 10, 8), rR(N));
 
