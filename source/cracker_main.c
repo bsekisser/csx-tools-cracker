@@ -136,7 +136,7 @@ static void cracker_pass_step(cracker_p cj, symbol_p cjs, int trace)
 	cj->symbol = cjs;
 	PC = cjs->pat;
 	while(PC <= cjs->end_pat) {
-		if(!cracker_step(cj)) {
+		if(!cracker_symbol_step(cj, cjs)) {
 			cracker_clear(cj);
 			break;
 		}
@@ -272,7 +272,7 @@ void cracker_symbol__log_text(cracker_p cj, symbol_p cjs)
 	if(cjs->in_bounds) {
 		PC = cjs->pat;
 		while(PC <= cjs->end_pat) {
-			if(!cracker_step(cj)) {
+			if(!cracker_symbol_step(cj, cjs)) {
 				cracker_clear(cj);
 				break;
 			}
@@ -337,6 +337,16 @@ void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
 
 		cjs = symbol_next(0, cjs);
 	}while(cjs);
+}
+
+int cracker_symbol_step(cracker_p cj, symbol_p cjs)
+{
+	IP = PC;
+	
+	if(cjs->thumb)
+		return(thumb_step(cj));
+	
+	return(arm_step(cj));
 }
 
 /* **** */
