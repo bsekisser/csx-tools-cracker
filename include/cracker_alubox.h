@@ -14,12 +14,16 @@
 	_ESAC(ARM_ADD, s1 + s2) \
 	_ESAC(ARM_AND, s1 & s2) \
 	_ESAC(ARM_BIC, s1 & ~s2) \
+	_ESAC(ARM_CMN, s1 + s2) \
+	_ESAC(ARM_CMP, s1 - s2) \
 	_ESAC(ARM_EOR, s1 ^ s2) \
 	_ESAC(ARM_MOV, s2) \
 	_ESAC(ARM_MVN, -s2) \
 	_ESAC(ARM_ORR, s1 | s2) \
 	_ESAC(ARM_RSB, s2 - s1) \
 	_ESAC(ARM_SUB, s1 - s2) \
+	_ESAC(ARM_TEQ, s1 ^ s2) \
+	_ESAC(ARM_TST, s1 & s2)
 
 /* **** */
 
@@ -45,6 +49,7 @@ static inline uint32_t alubox(uint8_t op, uint32_t s1, uint32_t s2)
 	switch(op) {
 		ALU_BOX_LIST(SWITCH_CASE)
 		default:
+			LOG("op = 0x%02x", op);
 			LOG_ACTION(exit(-1));
 	}
 

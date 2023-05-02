@@ -66,11 +66,7 @@ uint32_t _read(cracker_p cj, uint32_t pat, size_t size)
 	uint8_t* src = _check_bounds(cj, pat, size, 0);
 
 	if(0 == src)
-	{
-//		return(0xdeadbeef);
-		return(-1);
-		LOG_ACTION(exit(-1));
-	}
+		return(0);
 
 	for(uint i = 0; i < size; i++)
 		res |= ((*src++) << (i << 3));
@@ -84,13 +80,13 @@ void cracker_clear(cracker_p cj)
 {
 	for(int i = 0; i < 16; i++) {
 		vGPR(i) = 0;
-		GPR(i).src = ~0;
-		GPR(i).isPtr = 0;
+		GPR(i)->_flags = 0;
 	}
 
 	for(int i = 0; i < REG_COUNT; i++) {
 		rRx(i) = 0;
 		vRx(i) = 0;
+		rrCIRx(i)->_flags = 0;
 	}
 }
 
@@ -179,27 +175,6 @@ void cracker_pass(cracker_p cj, int trace)
 
 	LOG("symbols_added: 0x%08x, pass_symbol_count: 0x%08x",
 		cj->symbol_count.added, pass_symbol_count);
-}
-
-/* **** */
-
-void cracker_reg_dst(cracker_p cj, uint8_t r)
-{
-	if(!cj->symbol)
-		return;
-
-	BSET(cj->symbol->reg.dst, r);
-}
-
-void cracker_reg_src(cracker_p cj, uint8_t r)
-{
-	if(!cj->symbol)
-		return;
-
-	if(BTST(cj->symbol->reg.dst, r))
-		return;
-	
-	BSET(cj->symbol->reg.src, r);
 }
 
 /* **** */
