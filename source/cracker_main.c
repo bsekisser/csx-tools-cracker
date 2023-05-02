@@ -225,7 +225,9 @@ void cracker_symbol__log_data(cracker_p cj, symbol_p cjs) {
 
 void cracker_symbol__log_text(cracker_p cj, symbol_p cjs)
 {
-	LOG_START("0x%08x", cjs->pat);
+	const uint32_t pat_mask = ~3 >> (cjs->pat & 1);
+
+	LOG_START("0x%08x", cjs->pat & pat_mask);
 
 	if(cjs->in_bounds)
 			_LOG_(" -- 0x%08x", cjs->end_pat);
@@ -278,8 +280,9 @@ void cracker_symbol_end(symbol_p cjs, uint32_t pat, const char* name)
 	if(pat_masked > (cjs->end_pat & pat_mask))
 		return;
 
-	const uint32_t end_pat_offset = 4 >> cjs->thumb;
-	const uint32_t end_pat = (pat - end_pat_offset) & pat_mask;
+//	const uint32_t end_pat_offset = 4 >> cjs->thumb;
+//	const uint32_t end_pat = (pat - end_pat_offset) & pat_mask;
+	const uint32_t end_pat = pat - (1 << (pat & 1));
 
 	if(0) LOG("%s%s-- pat: 0x%08x, end: 0x%08x, new_end: 0x%08x",
 		name ?: "", name ? " " : "",
