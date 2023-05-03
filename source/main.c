@@ -54,10 +54,20 @@ int main(void)
 {
 	cracker_p cj = calloc(1, sizeof(cracker_t));
 
-	load_content(&cj->content, LOADER_FileName);
+//	load_content(&cj->content, LOADER_FileName);
+	load_content(&cj->content, FIRMWARE_FileName);
 
+	cracker_data(cj, cj->content.end, sizeof(uint32_t));
 	cracker_text(cj, cj->content.base);
 
+	uint32_t src = cj->content.end;
+	do {
+		if(0xffffa55a == _read(cj, src, sizeof(uint32_t)))
+			cracker_data(cj, src, sizeof(uint32_t));
+
+		src--;
+	} while(src > cj->content.base);
+	
 	PC = cj->content.base;
 	IR = _read(cj, PC, sizeof(uint32_t));
 	PC += sizeof(uint32_t);

@@ -55,7 +55,7 @@ void cracker_reg_dst_src(cracker_p cj, uint8_t rxd, uint8_t rrd, uint8_t rxs)
 {
 	_cracker_reg_dst(cj, rrd);
 	
-	_setup_rR_vR(cj, rxd, rrd, 0);
+	_setup_rR_vR(cj, rxd, rrd, vRx(rxs));
 
 	rrCIRx(rxd)->_flags = GPR_rRx(rxs)->_flags;
 	rrCIRx(rxd)->is_pc_ref = rRx_IS_PC(rxs);

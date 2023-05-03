@@ -62,14 +62,21 @@ static uint8_t* _check_bounds(cracker_p cj, uint32_t pat, size_t size, void **p2
 
 uint32_t _read(cracker_p cj, uint32_t pat, size_t size)
 {
-	uint32_t res = 0;
-	uint8_t* src = _check_bounds(cj, pat, size, 0);
-
-	if(0 == src)
+	if(pat < cj->content.base)
+		return(0);
+	if(pat > cj->content.end)
 		return(0);
 
-	for(uint i = 0; i < size; i++)
-		res |= ((*src++) << (i << 3));
+	uint32_t res = 0;
+
+	uint8_t* src = cj->content.data;
+
+	for(uint i = 0; i < size; i++) {
+		uint32_t offset = pat++ - cj->content.base;
+		res |= ((src[offset]) << (i << 3));
+		if(pat > cj->content.end)
+			break;
+	}
 
 	return(res);
 }

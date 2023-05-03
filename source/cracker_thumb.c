@@ -1,4 +1,5 @@
-#define THUMB_PC ((PC + 2) & ~1U)
+#define THUMB_IP_NEXT ((IP + 2) & ~1U)
+#define THUMB_PC ((IP + 4) & ~1U)
 
 #include "cracker_thumb.h"
 
@@ -27,7 +28,7 @@ static int _fetch(cracker_p cj)
 {
 	PC += sizeof(uint16_t);
 	
-	return(_read(cj, IP & ~1, sizeof(uint16_t)));
+	return(_read(cj, IP & ~1U, sizeof(uint16_t)));
 }
 
 /* **** */
@@ -173,9 +174,9 @@ static int thumb_inst_ascm_i(cracker_p cj)
 static int thumb_inst_b(cracker_p cj)
 {
 	const int32_t eao = mlBFMOVs(IR, 10, 0, 1);
-	const uint32_t new_pc = PC + eao;
+	const uint32_t new_pc = THUMB_PC + eao;
 
-	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x*/", new_pc & ~1, PC, eao);
+	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x*/", new_pc & ~1, THUMB_PC, eao);
 
 	cracker_text(cj, new_pc | 1);
 	
@@ -193,7 +194,7 @@ static int thumb_inst_bcc(cracker_p cj)
 
 	cracker_text(cj, new_pc);
 
-	const uint32_t new_lr = PC | 1;
+	const uint32_t new_lr = THUMB_IP_NEXT | 1;
 	return(cracker_text_branch_link(cj, new_lr));
 }
 
@@ -216,7 +217,7 @@ static int thumb_inst_bx_blx(cracker_p cj)
 	CORE_TRACE_END();
 
 	if(link) {
-		const uint32_t new_lr = PC | 1;
+		const uint32_t new_lr = THUMB_IP_NEXT | 1;
 		return(cracker_text_branch_link(cj, new_lr));
 	}
 
@@ -229,9 +230,9 @@ static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
 
 	if(0) LOG("LR = 0x%08x, PC = 0x%08x", LR, new_pc);
 
-	const uint32_t new_lr = PC | 1;
+	const uint32_t new_lr = THUMB_PC | 1;
 
-	int splat = (new_pc == PC);
+	int splat = (new_pc == new_lr);
 	CORE_TRACE("BL%s(0x%08x); /* 0x%08x + %s0x%08x, LR = 0x%08x */",
 		blx ? "X" : "", new_pc & ~1, PC, splat ? "x" : "", eao, new_lr & ~1);
 
@@ -258,9 +259,9 @@ static int thumb_inst_bxx_prefix(cracker_p cj)
 		LOG_ACTION(exit(-1));
 	}
 
-	LR = 2 + PC + eao_prefix;
+	LR = THUMB_PC + eao_prefix;
 
-	const uint32_t ir_suffix = _read(cj, PC & ~1, sizeof(uint16_t));
+	const uint32_t ir_suffix = _read(cj, THUMB_IP_NEXT, sizeof(uint16_t));
 	if(0xe800 == (ir_suffix & 0xe800)) {
 		const int blx = 1 ^ BEXT(ir_suffix, 12);
 		
@@ -456,7 +457,7 @@ static int thumb_inst_pop_push(cracker_p cj)
 	const char *pclrs = bit_r ? (bit_l ? ", PC" : ", LR") : "";
 	CORE_TRACE("%s(rSP, r{%s%s});", bit_l ? "POP" : "PUSH", reglist, pclrs);
 
-	return(!(bit_r && bit_l));
+	return(cracker_text_end_if(cj, THUMB_IP_NEXT, (bit_r && bit_l)));
 }
 
 static int thumb_inst_sdp_rms_rdn(cracker_p cj)
@@ -476,7 +477,7 @@ static int thumb_inst_sdp_rms_rdn(cracker_p cj)
 	CORE_TRACE("%s(%s, %s)", sos, rR_NAME(D),
 		rR_NAME(M));
 
-	return(rPC != rR(D));
+	return(!rR_IS_PC(D));
 }
 
 static int thumb_inst_shift_i(cracker_p cj)
