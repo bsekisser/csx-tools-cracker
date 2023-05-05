@@ -238,6 +238,11 @@ static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
 
 	if(0) LOG("LR = 0x%08x, PC = 0x%08x", new_lr, new_pc);
 
+	if(0xf000e000 != (IR & 0xf000e000)) {
+		LOG("Possible Invalid BL/BLX prefix/suffix -- !! EFFECTS NOT RECORDED !!");
+		return(0);
+	}
+
 	cracker_text(cj, new_pc);
 
 	return(cracker_text_branch_link(cj, new_lr));

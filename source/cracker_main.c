@@ -60,6 +60,21 @@ static uint8_t* _check_bounds(cracker_p cj, uint32_t pat, size_t size, void **p2
 	return(target);
 }
 
+static void _cracker_symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs)
+{
+	if(0 == cjs)
+		return;
+
+	cracker_symbol_end(lhs, cjs->pat, "cracker_symbol_enqueue -- lhs");
+
+	symbol_p rhs = lhs ? (symbol_p)lhs->qelem.next : 0;
+
+	if(rhs)
+		cracker_symbol_end(cjs, rhs->pat, "cracker_symbol_enqueue -- rhs");
+	
+	symbol_enqueue(h2sqh, lhs, cjs);
+}
+
 uint32_t _read(cracker_p cj, uint32_t pat, size_t size)
 {
 	if(pat < cj->content.base)
@@ -97,6 +112,40 @@ void cracker_clear(cracker_p cj)
 	}
 }
 
+symbol_p cracker_data_rel_string(cracker_p cj, uint32_t pat)
+{
+	size_t len = 0;
+	uint8_t* src = 0;
+	int subtype = SYMBOL_STRING_CSTRING;
+	
+	pat += cj->content.base;
+	if(_check_bounds(cj, pat, sizeof(uint8_t), (void**)&src)) {
+		do {
+			uint8_t c = *src++;
+			if((c < ' ') || (c > 0x7f)) {
+				len--;
+				subtype = SYMBOL_STRING_NSTRING;
+				break;
+			} else if(len > 0x7f) {
+				break;
+			}
+			len++;
+		}while(*src);
+	}
+	
+	if(0 == len) {
+		LOG_ACTION(return(0));
+	}
+	
+	symbol_p cjs = cracker_data(cj, pat, sizeof(uint8_t));
+	
+	BSET(cjs->type, SYMBOL_STRING);
+	cjs->type_subtype = subtype;
+	cjs->end_pat = pat + len;
+
+	return(cjs);
+}
+
 symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size)
 {
 	symbol_h sqh = &cj->symbol_qhead;
@@ -114,10 +163,8 @@ symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size)
 		cj->symbol_count.added++;
 		cj->symbol_count.data++;
 		
-		cracker_symbol_end(lhs, pat, "cracker_data -- lhs");
-		
 		cjs = symbol_new(pat, size, SYMBOL_DATA);
-		symbol_enqueue(sqh, lhs, cjs);
+		_cracker_symbol_enqueue(sqh, lhs, cjs);
 	}
 
 	return(cjs);
@@ -198,36 +245,67 @@ int cracker_step(cracker_p cj)
 
 /* **** */
 
-void cracker_symbol__log_data(cracker_p cj, symbol_p cjs) {
-	LOG_START("0x%08x:", cjs->pat);
+void cracker_symbol__log_data_log(cracker_p cj, symbol_p cjs, size_t size) {
+	if(0 == BTST(cjs->size, size))
+		return;
 
-	_LOG_(" refs: 0x%04x", cjs->refs);
+	_LOG_(", (uint%u_t", size << 3);
 
-	uint32_t data = 0;
-	size_t size = cjs->size;
+	if(_check_bounds(cj, cjs->pat, size, 0)) {
+		uint32_t data = _read(cj, cjs->pat, size);
 
-	if(BEXT(size, sizeof(uint32_t)))
-		data = _read(cj, cjs->pat, sizeof(uint32_t));
-	else if(BEXT(size, sizeof(uint16_t)))
-		data = _read(cj, cjs->pat, sizeof(uint16_t));
-	else if(BEXT(size, sizeof(uint8_t)))
-		data = _read(cj, cjs->pat, sizeof(uint8_t));
-
-	_LOG_(", size: 0x%04x", size);
-
-	if(BXCG(&size, sizeof(uint32_t), 0)) {
-		_LOG_(", (uint32_t (0x%08x))%s", data, size ? " |" : "");
+		switch(size) {
+			case sizeof(uint32_t):
+				_LOG_(" (0x%08x)", data);
+				break;
+			case sizeof(uint16_t):
+				_LOG_(" (0x%04x)", data);
+				break;
+			case sizeof(uint8_t):
+				_LOG_(" (0x%02x)", data);
+				break;
+		}
 	}
 
-	if(BXCG(&size, sizeof(uint16_t), 0)) {
-		_LOG_(", (uint16_t (0x%04x))%s", (uint16_t)data, size ? " |" : "");
-	}
+	_LOG_(")");
+}
 
-	if(BTST(size, sizeof(uint8_t))) {
-		_LOG_(", (uint8_t (0x%02x))", (uint8_t)data);
+void cracker_symbol__log_string(cracker_p cj, symbol_p cjs) {
+	size_t len = cjs->end_pat - cjs->pat;
+	
+	LOG_START("0x%08x -- 0x%08x:", cjs->pat, cjs->end_pat);
+
+	_LOG_(", refs: 0x%04x", cjs->refs);
+
+	_LOG_(", len: 0x%04x", len);
+
+	uint8_t* src = _check_bounds(cj, cjs->pat, sizeof(uint8_t), 0);
+	if(src) {
+		switch(cjs->type_subtype) {
+			case SYMBOL_STRING_CSTRING:
+				_LOG_(":: %s", src);
+				break;
+			case SYMBOL_STRING_NSTRING:
+				_LOG_(":: %.*s", len - 1, src);
+				break;
+		}
 	}
 
 	LOG_END();
+}
+
+void cracker_symbol__log_data(cracker_p cj, symbol_p cjs) {
+	LOG_START("0x%08x:", cjs->pat);
+
+	_LOG_(", refs: 0x%04x", cjs->refs);
+
+	_LOG_(", size: 0x%04x", cjs->size);
+
+	cracker_symbol__log_data_log(cj, cjs, sizeof(uint32_t));
+	cracker_symbol__log_data_log(cj, cjs, sizeof(uint16_t));
+	cracker_symbol__log_data_log(cj, cjs, sizeof(uint8_t));
+ 
+ 	LOG_END();
 }
 
 void cracker_symbol__log_text(cracker_p cj, symbol_p cjs)
@@ -303,11 +381,17 @@ void cracker_symbol_log(cracker_p cj, symbol_p cjs)
 	if(0 == cj->core.trace)
 		return;
 
+	assert(0 != cjs);
+
 	if(BTST(cjs->type, SYMBOL_TEXT))
 		cracker_symbol__log_text(cj, cjs);
 
-	if(BTST(cjs->type, SYMBOL_DATA))
-		cracker_symbol__log_data(cj, cjs);
+	if(BTST(cjs->type, SYMBOL_DATA)) {
+		if(BTST(cjs->type, SYMBOL_STRING))
+			cracker_symbol__log_string(cj, cjs);
+		else
+			cracker_symbol__log_data(cj, cjs);
+	}
 }
 
 void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
@@ -353,16 +437,16 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 		cj->symbol_count.added++;
 		cj->symbol_count.text++;
 
-//		LOG("pat = %c(0x%08x)", thumb ? 'T' : 'A', pat);
-
-		cracker_symbol_end(lhs, pat, "cracker_text -- lhs");
+		const int thumb = pat & 1;
+		if(0) LOG("pat = %c(0x%08x)", thumb ? 'T' : 'A', pat);
 
 		cjs = symbol_new(pat, sizeof(uint32_t), SYMBOL_TEXT);
-		symbol_enqueue(sqh, lhs, cjs);
 
 		cjs->end_pat = ~0U;
 		cjs->in_bounds = (0 != _check_bounds(cj, pat, sizeof(uint32_t), 0));
-		cjs->thumb = pat & 1;
+		cjs->thumb = thumb;
+
+		_cracker_symbol_enqueue(sqh, lhs, cjs);
 	}
 
 	return(cjs);

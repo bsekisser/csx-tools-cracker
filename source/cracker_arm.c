@@ -69,6 +69,8 @@ static int arm_inst_b_bl(cracker_p cj)
 	const int link = blx || (!blx && hl);
 	const uint32_t new_pc = (ARM_PC + offset);
 
+	// TODO: BLX CC_NV -->> CC_AL
+
 	int splat = (new_pc == ARM_IP_NEXT);
 	CORE_TRACE("B%s%s(0x%08x) /* %c(%s0x%08x) */",
 		link ? "L" : "", blx ? "X" : "", new_pc & (~3 >> blx),
