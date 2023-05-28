@@ -567,7 +567,7 @@ static int thumb_inst_shift_i(cracker_p cj)
 	const uint sop = mlBFEXT(IR, 12, 11);
 
 	setup_rR_vR(S, ~0, mlBFEXT(IR, 10, 6));
-	setup_rR_src(M, mlBFEXT(IR, 5, 3));
+	setup_rR_vR_src(M, mlBFEXT(IR, 5, 3));
 	setup_rR_dst(D, mlBFEXT(IR, 2, 0));
 //	setup_rR_dst_rR_src(D, mlBFEXT(IR, 2, 0), M);
 

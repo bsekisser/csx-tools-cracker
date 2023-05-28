@@ -198,7 +198,7 @@ static void arm_inst_dp(cracker_p cj)
 			break;
 	}
 
-	if((CC_AL == ARM_IR_CC) && (rR_IS_PC_REF(D))) {
+	if(CC_AL == ARM_IR_CC) {
 		if(wb) {
 			vR(D) = alubox(ARM_DPI_OP, vR(N), vR(SOP));
 
