@@ -54,13 +54,17 @@ int main(void)
 {
 	cracker_p cj = calloc(1, sizeof(cracker_t));
 
-	load_content(&cj->content, LOADER_FileName);
-//	load_content(&cj->content, FIRMWARE_FileName);
+	const int loader = 1;
+
+	if(loader)
+		load_content(&cj->content, LOADER_FileName);
+	else
+		load_content(&cj->content, FIRMWARE_FileName);
 
 	cracker_data(cj, cj->content.end, sizeof(uint32_t));
 	cracker_text(cj, cj->content.base);
 
-	if(1) { // loader
+	if(0) if(loader) { // loader
 		uint string_table[] = {
 			0x00000920, 0x0000418c, 0x0000419c, 0x000041a4,
 			0x00004254, 0x00004570, 0x000046af, 0x000046c8,
@@ -131,6 +135,7 @@ int main(void)
 			uint32_t word = _read(cj, src, sizeof(uint16_t));
 			
 			switch(word) {
+//				case 0x55aa: /* fat marker */
 				case 0x5aa5:
 				case 0xa55a:
 					cracker_data(cj, src, sizeof(uint16_t));

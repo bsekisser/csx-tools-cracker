@@ -31,25 +31,17 @@
 
 /* **** */
 
-//#define RGNDirPath "../../../garmin/rgn_files/"
-#define RGNDirPath "../../../garmin/rgn_files/"
+static int __pat_out_of_bounds(cracker_p cj, uint32_t pat, size_t size)
+{
+	int oob = pat < cj->content.base;
+	oob |= pat > (cj->content.end - size);
 
-//#define RGNFileName "029201000350" /* xxx */
-
-#define RGNFileName "038201000610"
-//#define RGNFileName "038201000280"
-
-//#define RGNFileName "048101000610"
-
-//#define RGNFileName "049701000610"
-
-/* **** */
+	return(oob);
+}
 
 static uint8_t* _check_bounds(cracker_p cj, uint32_t pat, size_t size, void **p2ptr)
 {
-	if(pat < cj->content.base)
-		return(0);
-	if(pat > (cj->content.end - size))
+	if(__pat_out_of_bounds(cj, pat, size))
 		return(0);
 
 	uint8_t* target = cj->content.data + (pat - cj->content.base);
@@ -71,29 +63,16 @@ static void _cracker_symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs)
 
 	if(rhs)
 		cracker_symbol_end(cjs, rhs->pat, "cracker_symbol_enqueue -- rhs");
-	
+
 	symbol_enqueue(h2sqh, lhs, cjs);
 }
 
 uint32_t _read(cracker_p cj, uint32_t pat, size_t size)
 {
-	if(pat < cj->content.base)
-		return(0);
-	if(pat > cj->content.end)
-		return(0);
+	uint32_t data = 0;
 
-	uint32_t res = 0;
-
-	uint8_t* src = cj->content.data;
-
-	for(uint i = 0; i < size; i++) {
-		uint32_t offset = pat++ - cj->content.base;
-		res |= ((src[offset]) << (i << 3));
-		if(pat > cj->content.end)
-			break;
-	}
-
-	return(res);
+	cracker_read_if(cj, pat, size, &data);
+	return(data);
 }
 
 /* **** */
@@ -117,7 +96,7 @@ symbol_p cracker_data_rel_string(cracker_p cj, uint32_t pat)
 	size_t len = 0;
 	uint8_t* src = 0;
 	int subtype = SYMBOL_STRING_CSTRING;
-	
+
 	pat += cj->content.base;
 	if(_check_bounds(cj, pat, sizeof(uint8_t), (void**)&src)) {
 		do {
@@ -132,13 +111,13 @@ symbol_p cracker_data_rel_string(cracker_p cj, uint32_t pat)
 			len++;
 		}while(*src);
 	}
-	
+
 	if(0 == len) {
 		LOG_ACTION(return(0));
 	}
-	
+
 	symbol_p cjs = cracker_data(cj, pat, sizeof(uint8_t));
-	
+
 	BSET(cjs->type, SYMBOL_STRING);
 	cjs->type_subtype = subtype;
 	cjs->end_pat = pat + len;
@@ -162,12 +141,61 @@ symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size)
 	} else {
 		cj->symbol_count.added++;
 		cj->symbol_count.data++;
-		
+
 		cjs = symbol_new(pat, size, SYMBOL_DATA);
+		cjs->end_pat = pat + size - 1;
+
 		_cracker_symbol_enqueue(sqh, lhs, cjs);
 	}
 
 	return(cjs);
+}
+
+static void cracker_dump_hex(cracker_p cj, uint32_t start, uint32_t end)
+{
+	const unsigned stride = 31;
+//	const unsigned stride = 15;
+//	const unsigned stride = 7;
+
+	if(__pat_out_of_bounds(cj, start, 1)
+		|| __pat_out_of_bounds(cj, end, stride))
+			return;
+
+	if(end < start)
+		LOG_ACTION(return);
+
+	const unsigned stride_mask = ~stride;
+
+	const uint32_t eend = (end + stride) & stride_mask;
+
+	uint32_t pat = start & stride_mask;
+
+	LOG("start = 0x%08x, sstart = 0x%08x, end = 0x%08x, eend = 0x%08x -- stride = 0x%08x, mask = 0x%08x",
+		start, pat, end, eend, stride, stride_mask);
+
+	do {
+		printf("0x%08x: ", pat);
+		char sstring[64], *dst = sstring;
+		*dst = 0;
+
+		for(unsigned count = stride + 1; count; count--, pat++) {
+			int valid = (pat >= start) && (pat <= end);
+
+			uint8_t data = valid ? _read(cj, pat, sizeof(uint8_t)) : 0;
+			uint8_t c = ((data < ' ') || (data > 0x7e))  ? '.' : data;
+
+			*dst++ = valid ? c : ' ';
+
+			if(valid) {
+				printf("%02x ", data & 0xff);
+			} else {
+				printf("   ");
+			}
+		}
+
+		*dst = 0;
+		printf("-- %s\n", sstring);
+	}while(pat < eend);
 }
 
 static void cracker_pass_step(cracker_p cj, symbol_p cjs, int trace)
@@ -187,6 +215,7 @@ static void cracker_pass_step(cracker_p cj, symbol_p cjs, int trace)
 	PC = cjs->pat;
 	while(PC <= cjs->end_pat) {
 		if(!cracker_symbol_step(cj, cjs)) {
+			cracker_symbol_end(cjs, PC, 0);
 			cracker_clear(cj);
 			break;
 		}
@@ -233,6 +262,26 @@ void cracker_pass(cracker_p cj, int trace)
 
 /* **** */
 
+int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data)
+{
+	*data = 0;
+	if(__pat_out_of_bounds(cj, pat, size))
+		return(0);
+
+	uint8_t* src = cj->content.data;
+
+	for(uint i = 0; i < size; i++) {
+		uint32_t offset = pat++ - cj->content.base;
+		*data |= ((src[offset]) << (i << 3));
+		if(pat > cj->content.end)
+			break;
+	}
+
+	return(1);
+}
+
+/* **** */
+
 int cracker_step(cracker_p cj)
 {
 	IP = PC;
@@ -272,7 +321,7 @@ void cracker_symbol__log_data_log(cracker_p cj, symbol_p cjs, size_t size) {
 
 void cracker_symbol__log_string(cracker_p cj, symbol_p cjs) {
 	size_t len = cjs->end_pat - cjs->pat;
-	
+
 	LOG_START("0x%08x -- 0x%08x:", cjs->pat, cjs->end_pat);
 
 	_LOG_(", refs: 0x%04x", cjs->refs);
@@ -295,22 +344,23 @@ void cracker_symbol__log_string(cracker_p cj, symbol_p cjs) {
 }
 
 void cracker_symbol__log_data(cracker_p cj, symbol_p cjs) {
-	LOG_START("0x%08x:", cjs->pat);
+	LOG_START("0x%08x", cjs->pat);
+		_LOG_(" -- 0x%08x", cjs->end_pat);
 
-	_LOG_(", refs: 0x%04x", cjs->refs);
+	_LOG_(": refs: 0x%04x", cjs->refs);
 
 	_LOG_(", size: 0x%04x", cjs->size);
 
 	cracker_symbol__log_data_log(cj, cjs, sizeof(uint32_t));
 	cracker_symbol__log_data_log(cj, cjs, sizeof(uint16_t));
 	cracker_symbol__log_data_log(cj, cjs, sizeof(uint8_t));
- 
+
  	LOG_END();
 }
 
 void cracker_symbol__log_text(cracker_p cj, symbol_p cjs)
 {
-	const uint32_t pat_mask = ~3 >> (cjs->pat & 1);
+	const uint32_t pat_mask = ~3 >> cjs->thumb;
 
 	LOG_START("0x%08x", cjs->pat & pat_mask);
 
@@ -365,9 +415,7 @@ void cracker_symbol_end(symbol_p cjs, uint32_t pat, const char* name)
 	if(pat_masked > (cjs->end_pat & pat_mask))
 		return;
 
-//	const uint32_t end_pat_offset = 4 >> cjs->thumb;
-//	const uint32_t end_pat = (pat - end_pat_offset) & pat_mask;
-	const uint32_t end_pat = pat - (1 << (pat & 1));
+	const uint32_t end_pat = pat_masked - 1;
 
 	if(0) LOG("%s%s-- pat: 0x%08x, end: 0x%08x, new_end: 0x%08x",
 		name ?: "", name ? " " : "",
@@ -404,17 +452,34 @@ void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
 	do {
 		cracker_symbol_log(cj, cjs);
 
+		symbol_p lhs = cjs;
 		cjs = symbol_next(0, cjs);
+
+		if(cjs) {
+			const uint32_t pat_bump = 3 >> lhs->thumb;
+			const uint32_t pat_mask = ~pat_bump;
+
+			const uint32_t cjs_pat = cjs->pat & (~3 >> cjs->thumb);
+			const uint32_t lhs_end_pat = lhs->end_pat;
+			const uint32_t lhs_end_pat_bumped = (lhs_end_pat + pat_bump) & pat_mask;
+
+			const uint32_t byte_count = cjs_pat - lhs_end_pat_bumped;
+			if(byte_count) {
+				LOG("0x%08x -- 0x%08x === 0x%08x", lhs_end_pat, cjs_pat, byte_count);
+				cracker_dump_hex(cj, lhs_end_pat + 1, cjs_pat - 1);
+				printf("\n");
+			}
+		}
 	}while(cjs);
 }
 
 int cracker_symbol_step(cracker_p cj, symbol_p cjs)
 {
 	IP = PC;
-	
+
 	if(cjs->thumb)
 		return(thumb_step(cj));
-	
+
 	return(arm_step(cj));
 }
 
@@ -476,6 +541,6 @@ int cracker_text_end_if(cracker_p cj, uint32_t pat, int end)
 {
 	if(end)
 		cracker_text_end(cj, pat);
-	
+
 	return(!end);
 }
