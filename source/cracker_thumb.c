@@ -13,6 +13,7 @@
 
 #include "bitfield.h"
 #include "log.h"
+#include "shift_roll.h"
 
 /* **** */
 
@@ -557,6 +558,12 @@ static int thumb_inst_sdp_rms_rdn(cracker_p cj)
 
 static int thumb_inst_shift_i(cracker_p cj)
 {
+	/* 0x0000 -- LSL -- 0000 0iii iimm mddd
+	 * 0x0800 -- LSR -- 0000 1iii iimm mddd
+	 * 0x1000 -- ASR -- 0001 0iii iimm mddd
+	 * 0x1800 -- XXX -- 0001 1xxx xxxx xxxx -- add_sub_rn_rd
+	 */
+
 	const uint sop = mlBFEXT(IR, 12, 11);
 
 	setup_rR_vR(S, ~0, mlBFEXT(IR, 10, 6));
@@ -570,7 +577,7 @@ static int thumb_inst_shift_i(cracker_p cj)
 			if(!vR(S))
 				vR(S) = 32;
 		case SOP_LSL:
-		case SOP_ROR:
+//		case SOP_ROR: // !! invalid !!
 			break;
 		default:
 			CORE_TRACE("SHIFT_I_OP = 0x%02x", sop);
@@ -578,9 +585,28 @@ static int thumb_inst_shift_i(cracker_p cj)
 			break;
 	}
 
-	CORE_TRACE("%s(%s, %s, 0x%02x)",
+	switch(sop) {
+		case SOP_ASR:
+			vR(D) = _asr(vR(M), vR(S));
+			break;
+		case SOP_LSL:
+			vR(D) = _lsl(vR(M), vR(S));
+			break;
+		case SOP_LSR:
+			vR(D) = _lsr(vR(M), vR(S));
+			break;
+	}
+
+	cracker_reg_dst_wb(cj, rrRD);
+
+	CORE_TRACE_START("%s(%s, %s, 0x%02x)",
 		shift_op_string[sop], rR_NAME(D),
 		rR_NAME(M), vR(S));
+
+	_CORE_TRACE_("; /* %s(0x%08x, 0x%08x) == 0x%08x */",
+		shift_op_string[sop], vR(M), vR(S), vR(D));
+
+	CORE_TRACE_END();
 
 	return(1);
 }
