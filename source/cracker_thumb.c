@@ -1,5 +1,10 @@
 #define THUMB_IP_NEXT ((IP + 2) & ~1U)
+#define THUMB1_IP_NEXT (THUMB_IP_NEXT | 1)
+
 #define THUMB_PC ((IP + 4) & ~1U)
+#define THUMB1_PC (THUMB_PC | 1)
+
+#define THUMB_PC4 ((IP + 4) & ~3U)
 
 #include "cracker_thumb.h"
 
@@ -39,7 +44,7 @@ static int thumb_inst_add_rd_pcsp_i(cracker_p cj)
 	const uint16_t imm8 = mlBFMOV(IR, 7, 0, 2);
 	const int is_sp = BEXT(IR, 11);
 
-	setup_rR_vR(N, is_sp ? rSP : rPC, is_sp ? 0 : (THUMB_PC & ~3U));
+	setup_rR_vR(N, is_sp ? rSP : rPC, is_sp ? 0 : THUMB_PC4);
 
 	setup_rR_dst_rR_src(D, mlBFEXT(IR, 10, 8), N);
 
@@ -86,7 +91,12 @@ static int thumb_inst_add_sub_rn_rd(cracker_p cj)
 
 	setup_rR_vR_src(N, mlBFEXT(IR, 5, 3));
 
-	setup_rR_dst_rR_src(D, mlBFEXT(IR, 2, 0), N);
+	if(rR_IS_PC_REF(N))
+		setup_rR_dst_rR_src(D, mlBFEXT(IR, 2, 0), N);
+	else if(rR_IS_PC_REF(M))
+		setup_rR_dst_rR_src(D, mlBFEXT(IR, 2, 0), M);
+	else
+		setup_rR_dst(D, mlBFEXT(IR, 2, 0));
 
 	const uint8_t aluop[2] = { ARM_ADD, ARM_SUB };
 	if(alubox(&vR(D), aluop[op2], vR(N), vR(M)))
@@ -150,7 +160,7 @@ static int thumb_inst_ascm_i(cracker_p cj)
 	else
 		setup_rR_vR_src(N, mlBFEXT(IR, 10, 8));
 
-	if(2 & op)
+	if(1 != op)
 		setup_rR_dst_rR_src(D, rR(N), N);
 
 	if(alubox(&vR(D), aluop[op], vR(N), imm8))
@@ -185,12 +195,11 @@ static int thumb_inst_ascm_i(cracker_p cj)
 static int thumb_inst_b(cracker_p cj)
 {
 	const int32_t eao = mlBFMOVs(IR, 10, 0, 1);
-	const uint32_t new_pc = THUMB_PC + eao;
+	const uint32_t new_pc = THUMB1_PC + eao;
 
 	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x*/", new_pc & ~1, THUMB_PC, eao);
 
-//	cracker_text_end(cj, THUMB_IP_NEXT | 1);
-	cracker_text(cj, new_pc | 1);
+	cracker_text(cj, new_pc);
 
 	return(0);
 }
@@ -200,13 +209,13 @@ static int thumb_inst_bcc(cracker_p cj)
 	CCv = mlBFEXT(IR, 11, 8);
 	const int32_t imm8 = mlBFMOVs(IR, 7, 0, 1);
 
-	const uint32_t new_pc = (THUMB_PC + imm8) | 1;
+	const uint32_t new_pc = (THUMB1_PC + imm8);
 
 	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x */", new_pc & ~1, THUMB_PC, imm8);
 
-	cracker_text(cj, new_pc | 1);
+	cracker_text(cj, new_pc);
 
-	LR = THUMB_IP_NEXT | 1;
+	LR = THUMB1_IP_NEXT;
 	return(cracker_text_branch_link(cj, LR));
 }
 
@@ -230,7 +239,7 @@ static int thumb_inst_bx_blx(cracker_p cj)
 	CORE_TRACE_END();
 
 	if(link) {
-		LR = THUMB_IP_NEXT | 1;
+		LR = THUMB1_IP_NEXT;
 		return(cracker_text_branch_link(cj, LR));
 	}
 
@@ -243,7 +252,7 @@ static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
 
 	if(0) LOG("LR = 0x%08x, PC = 0x%08x", LR, new_pc);
 
-	const uint32_t new_lr = THUMB_PC | 1;
+	const uint32_t new_lr = THUMB1_PC;
 
 	int splat = (new_pc == new_lr);
 	CORE_TRACE("BL%s(0x%08x); /* 0x%08x + %s0x%08x, LR = 0x%08x */",
@@ -374,19 +383,33 @@ static int thumb_inst_ldst_bwh_o_rn_rd(cracker_p cj)
 
 static int thumb_inst_ldst_op_rm_rn_rd(cracker_p cj)
 {
+	/* 0x5600 -- LDRSB -- 0101 011m mmnn nddd
+	 * 0x5700 -- LDRSB -- 0101 111m mmnn nddd
+	 * 0x5800 -- LDR   -- 0101 100m mmnn nddd
+	 * 0x5a00 -- LDRH  -- 0101 101m mmnn nddd
+	 * 0x5c00 -- LDRB  -- 0101 110m mmnn nddd
+	 */
+	
 //	const int opcode mlBFEXT(IR, 11, 9);
 	const int flag_s = (3 == mlBFEXT(IR, 10, 9));
-	const int bit_b = !flag_s ? BEXT(IR, 10) : !BEXT(IR, 11);
-	const int bit_h = !flag_s ? BEXT(IR, 9) : BEXT(IR, 11);
-	const int bit_l = !flag_s ? BEXT(IR, 11) : 0;
+	const int bit_b = flag_s ? !BEXT(IR, 11) : BEXT(IR, 10);
+	const int bit_h = flag_s ? BEXT(IR, 11) : BEXT(IR, 9);
+	const int bit_l = flag_s ? 1 : BEXT(IR, 11);
 
 	setup_rR_vR_src(M, mlBFEXT(IR, 8, 6));
 	setup_rR_vR_src(N, mlBFEXT(IR, 5, 3));
 
+	if(0) {
+		LOG("0x%02x == 0x%08x", rR(N), vR(N));
+		LOG("0x%02x == 0x%08x", rR(M), vR(M));
+	}
+
 	vR(EA) = vR(N) + vR(M);
 
-	rR(EA) = flag_s ? (1 << BEXT(IR, 11))
-		: (4 >> mlBFEXT(IR, 9, 10));
+	rR(EA) = flag_s ? sizeof(uint32_t) : (4U >> mlBFEXT(IR, 9, 10));
+
+	if(0)
+		LOG("[0x%08x]:%02u", vR(EA), rR(EA) & 0xff);
 
 	int is_valid_read = 0;
 
@@ -441,7 +464,7 @@ static int thumb_inst_ldst_rd_i(cracker_p cj)
 
 	switch(mlBFTST(IR, 15, 12)) {
 		case 0x4000: /* pc */
-			setup_rR_vR(N, rPC, THUMB_PC & ~3);
+			setup_rR_vR(N, rPC, THUMB_PC4);
 			break;
 		case 0x9000: /* sp */
 			setup_rR_vR(N, rSP, 0);
@@ -526,7 +549,6 @@ static int thumb_inst_pop_push(cracker_p cj)
 	const char *pclrs = bit_r ? (bit_l ? ", PC" : ", LR") : "";
 	CORE_TRACE("%s(rSP, r{%s%s});", bit_l ? "POP" : "PUSH", reglist, pclrs);
 
-//	return(cracker_text_end_if(cj, THUMB_IP_NEXT, (bit_r && bit_l)));
 	return(!(bit_r && bit_l));
 }
 
@@ -668,7 +690,6 @@ static int thumb_step__fail_decode(cracker_p cj, int crap)
 	if(0 && crap)
 		LOG_ACTION(exit(-1));
 
-//	cracker_text_end(cj, IP);
 	return(0);
 }
 

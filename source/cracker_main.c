@@ -441,6 +441,7 @@ size_t cracker_symbol_intergap(cracker_p cj, symbol_p lhs, symbol_p rhs)
 	const uint32_t pat_bump = 3 >> lhs->thumb;
 	const uint32_t pat_mask = ~pat_bump;
 
+//	const uint32_t lhs_end_pat = lhs->end_pat & (~3 >> lhs->thumb);
 	const uint32_t lhs_end_pat = lhs->end_pat;
 	const uint32_t lhs_end_pat_bumped = (lhs_end_pat + pat_bump) & pat_mask;
 
@@ -484,8 +485,10 @@ void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
 		if(cjs) {
 			const size_t byte_count = cracker_symbol_intergap(cj, lhs, cjs);
 			if(byte_count) {
-				LOG("0x%08x -- 0x%08x === 0x%08x", lhs->end_pat, cjs->pat, byte_count);
-				cracker_dump_hex(cj, lhs->end_pat + 1, cjs->pat - 1);
+				const uint32_t cjs_pat = cjs->pat & (~3 >> cjs->thumb);
+
+				LOG("0x%08x -- 0x%08x === 0x%08x", lhs->end_pat, cjs_pat, byte_count);
+				cracker_dump_hex(cj, 1 + lhs->end_pat, -1 + cjs_pat);
 				printf("\n");
 			}
 		}

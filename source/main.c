@@ -242,7 +242,7 @@ int main(void)
 	{
 		cracker_pass(cj, 0);
 		
-		if(0 == cj->symbol_count.added) {
+		if(1) if(0 == cj->symbol_count.added) {
 			_scrounge_pass(cj);
 		}
 	}
