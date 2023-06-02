@@ -89,8 +89,8 @@ static int thumb_inst_add_sub_rn_rd(cracker_p cj)
 	setup_rR_dst_rR_src(D, mlBFEXT(IR, 2, 0), N);
 
 	const uint8_t aluop[2] = { ARM_ADD, ARM_SUB };
-	vR(D) = alubox(aluop[op2], vR(N), vR(M));
-	cracker_reg_dst_wb(cj, rrRD);
+	if(alubox(&vR(D), aluop[op2], vR(N), vR(M)))
+		cracker_reg_dst_wb(cj, rrRD);
 
 	CORE_TRACE_START("%s(%s, %s, ", ops[op2], reg_name[rR(D)],
 		rR_NAME(N));
@@ -150,12 +150,11 @@ static int thumb_inst_ascm_i(cracker_p cj)
 	else
 		setup_rR_vR_src(N, mlBFEXT(IR, 10, 8));
 
-	setup_rR_dst_rR_src(D, rR(N), N);
+	if(2 & op)
+		setup_rR_dst_rR_src(D, rR(N), N);
 
-//	if(rR_IS_PC_REF(N)) {
-		vR(D) = alubox(aluop[op], vR(N), imm8);
+	if(alubox(&vR(D), aluop[op], vR(N), imm8))
 		cracker_reg_dst_wb(cj, rrRD);
-//	}
 
 	CORE_TRACE_START("%s(%s, 0x%02x)",
 		opname[op], reg_name[rR(D)], imm8);
@@ -166,10 +165,8 @@ static int thumb_inst_ascm_i(cracker_p cj)
 		case THUMB_ASCM_ADD:
 		case THUMB_ASCM_CMP:
 		case THUMB_ASCM_SUB:
-			if(rR_IS_PC_REF(N)) {
-				_CORE_TRACE_("; /* 0x%08x %c 0x%02x = 0x%08x */",
-					vR(N), opc[op], imm8, vR(D));
-				}
+			_CORE_TRACE_("; /* 0x%08x %c 0x%02x = 0x%08x */",
+				vR(N), opc[op], imm8, vR(D));
 			break;
 		case THUMB_ASCM_MOV:
 			break;
@@ -327,16 +324,25 @@ static int thumb_inst_ldst_bwh_o_rn_rd(cracker_p cj)
 
 	const uint8_t imm5 = mlBFEXT(IR, 10, 6);
 
+	const uint16_t offset = imm5 << (bit_h ? 1 : (bit_b ? 0 : 2));
+	const size_t size = (bit_h ? 2: (bit_b ? 1 : 4));
+
 	setup_rR_vR_src(N, mlBFEXT(IR, 5, 3));
+	const uint32_t pat = vR(N) + offset;
 
-	if(0) LOG("%s -- 0x%08x XXX", rR_NAME(N), vR(N));
+	int is_valid_read = 0;
 
-	if(bit_l)
+	if(bit_l) {
 		setup_rR_dst(D, mlBFEXT(IR, 2, 0));
-	else
+
+		if(rR_IS_PC_REF(N))
+			is_valid_read = cracker_data_read_if(cj, pat, size, &vR(D));
+
+		cracker_reg_dst_wb(cj, rrRD);
+	} else
 		setup_rR_src(D, mlBFEXT(IR, 2, 0));
 
-	if(0) LOG("%s -- 0x%08x", rR_NAME(D), vR(D));
+	/* **** */
 
 	const char* bwh = (bit_h ? "H" : (bit_b ? "B" : ""));
 
@@ -345,9 +351,6 @@ static int thumb_inst_ldst_bwh_o_rn_rd(cracker_p cj)
 	_CORE_TRACE_("%sR%s(%s, %s", bit_l ? "LD" : "ST", bwh,
 		rR_NAME(D), rR_NAME(N));
 
-	const uint16_t offset = imm5 << (bit_h ? 1 : (bit_b ? 0 : 2));
-	const size_t size = (bit_h ? 2: (bit_b ? 1 : 4));
-
 	if(imm5) {
 		_CORE_TRACE_(", 0x%03x", offset);
 	}
@@ -355,15 +358,9 @@ static int thumb_inst_ldst_bwh_o_rn_rd(cracker_p cj)
 	_CORE_TRACE_(")");
 
 	if(rR_IS_PC_REF(N)) {
-		const uint32_t pat = vR(N) + offset;
-
-		cracker_data(cj, pat, size);
-
 		_CORE_TRACE_("; /* [0x%08x]", pat);
 
-		if(cracker_read_if(cj, pat, size, &vR(D))) {
-			cracker_reg_dst_wb(cj, rrRD);
-
+		if(is_valid_read) {
 			_CORE_TRACE_(":0x%08x", vR(D));
 		}
 
@@ -381,16 +378,38 @@ static int thumb_inst_ldst_op_rm_rn_rd(cracker_p cj)
 	const int flag_s = (3 == mlBFEXT(IR, 10, 9));
 	const int bit_b = !flag_s ? BEXT(IR, 10) : !BEXT(IR, 11);
 	const int bit_h = !flag_s ? BEXT(IR, 9) : BEXT(IR, 11);
-	const int bit_l = !flag_s ?  BEXT(IR, 11) : 0;
+	const int bit_l = !flag_s ? BEXT(IR, 11) : 0;
 
 	setup_rR_vR_src(M, mlBFEXT(IR, 8, 6));
 	setup_rR_vR_src(N, mlBFEXT(IR, 5, 3));
 
+	vR(EA) = vR(N) + vR(M);
+
+	rR(EA) = flag_s ? (1 << BEXT(IR, 11))
+		: (4 >> mlBFEXT(IR, 9, 10));
+
+	int is_valid_read = 0;
+
 	if(bit_l) {
-//		setup_rR_dst_rR_src(D, mlBFEXT(IR, 2, 0), N);
-		setup_rR_dst(D, mlBFEXT(IR, 2, 0));
+		if(rR_IS_PC_REF(N)) {
+			setup_rR_dst_rR_src(D, mlBFEXT(IR, 2, 0), N);
+			is_valid_read = cracker_data_read_if(cj, vR(EA), rR(EA), &vR(D));
+			if(is_valid_read && flag_s) {
+				switch(rR(EA)) {
+					case sizeof(int16_t):
+						vR(D) = (int16_t)vR(D);
+						break;
+					case sizeof(int8_t):
+						vR(D) = (int8_t)vR(D);
+						break;
+				}
+			}
+		} else
+			setup_rR_dst(D, mlBFEXT(IR, 2, 0));
+
+		cracker_reg_dst_wb(cj, rrRD);
 	} else
-		setup_rR_vR_src(D, mlBFEXT(IR, 2, 0));
+		setup_rR_src(D, mlBFEXT(IR, 2, 0));
 
 	const char* bwh = (bit_h ? "H" : (bit_b ? "B" : ""));
 
@@ -399,6 +418,16 @@ static int thumb_inst_ldst_op_rm_rn_rd(cracker_p cj)
 	_CORE_TRACE_("%sR%s%s(%s, %s, %s)", bit_l ? "LD" : "ST", bwh,
 		flag_s ? "S" : "",
 		rR_NAME(D), rR_NAME(N), rR_NAME(M));
+
+	if(rR_IS_PC_REF(N)) {
+		_CORE_TRACE_("/* [0x%08x]", vR(EA));
+		
+		if(is_valid_read) {
+			_CORE_TRACE_(":0x%08x ", vR(D));
+		}
+
+		_CORE_TRACE_("*/");
+	}
 
 	CORE_TRACE_END();
 
@@ -423,22 +452,24 @@ static int thumb_inst_ldst_rd_i(cracker_p cj)
 			break;
 	}
 
-	if(bit_l)
-		setup_rR_dst_rR_src(D, mlBFEXT(IR, 10, 8), N);
-	else
+	const uint ea = vR(N) + offset;
+	int is_valid_read = 0;
+
+	if(bit_l) {
+		if(rR_IS_PC(N)) {
+			setup_rR_dst_rR_src(D, mlBFEXT(IR, 10, 8), N);
+			is_valid_read = cracker_data_read_if(cj, ea, sizeof(uint32_t), &vR(D));
+		} else
+			setup_rR_dst(D, mlBFEXT(IR, 10, 8));
+
+		cracker_reg_dst_wb(cj, rrRD);
+	} else
 		setup_rR_src(D, mlBFEXT(IR, 10, 8));
 
 	CORE_TRACE_START("%sR(%s, %s, 0x%04x", bit_l ? "LD" : "ST",
 		reg_name[rR(D)], rR_NAME(N), offset);
 
-	if(rR_IS_PC(N)) {
-		const uint ea = vR(N) + offset;
-
-		cracker_data(cj, ea, sizeof(uint32_t));
-
-		vR(D) = _read(cj, ea, sizeof(uint32_t));
-		cracker_reg_dst_wb(cj, rrRD);
-
+	if(is_valid_read) {
 		_CORE_TRACE_("); /* [0x%08x]:0x%08x */", ea, vR(D));
 	}
 
@@ -459,9 +490,10 @@ static int thumb_inst_ldstm(cracker_p cj)
 		uint8_t rr = BEXT(IR, i);
 		*dst++ = rr ? ('0' + i) : '.';
 
-		if(bit_l)
+		if(bit_l) {
 			cracker_reg_dst(cj, rrRD, rr);
-		else
+			cracker_reg_dst_wb(cj, rrRD);
+		} else
 			cracker_reg_src(cj, rrRD, rr, 0);
 	}
 	*dst = 0;
@@ -483,9 +515,10 @@ static int thumb_inst_pop_push(cracker_p cj)
 		uint8_t rr = BEXT(IR, i);
 		*dst++ = rr ? ('0' + i) : '.';
 
-		if(bit_l) /* pop */
+		if(bit_l) { /* pop */
 			cracker_reg_dst(cj, rrRD, rr);
-		else /* push */
+			cracker_reg_dst_wb(cj, rrRD);
+		} else /* push */
 			cracker_reg_src(cj, rrRD, rr, 0);
 	}
 	*dst = 0;
@@ -529,8 +562,7 @@ static int thumb_inst_sdp_rms_rdn(cracker_p cj)
 	}
 
 	const uint aluop[4] = { ARM_ADD, ARM_CMP, ARM_MOV, -1 };
-	vR(D) = alubox(aluop[operation], vR(N), vR(M));
-	if(!(operation & 1))
+	if(alubox(&vR(D), aluop[operation], vR(N), vR(M)))
 		cracker_reg_dst_wb(cj, rrRD);
 
 	CORE_TRACE_START("%s(%s, %s", sos, rR_NAME(D),

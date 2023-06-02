@@ -150,8 +150,6 @@ static int arm_inst_cdp_mcr_mrc(cracker_p cj)
 
 static void arm_inst_dp(cracker_p cj)
 {
-	int wb = 0;
-
 	CORE_TRACE_START();
 
 	switch(ARM_DPI_OP) {
@@ -165,7 +163,6 @@ static void arm_inst_dp(cracker_p cj)
 		case ARM_RSC:
 		case ARM_SBC:
 		case ARM_SUB:
-			wb = 1;
 			setup_rR_vR_src(N, ARM_IR_RN);
 			setup_rR_dst_rR_src(D, ARM_IR_RD, N);
 
@@ -200,13 +197,11 @@ static void arm_inst_dp(cracker_p cj)
 	}
 
 	if(CC_AL == ARM_IR_CC) {
-		if(wb) {
-			vR(D) = alubox(ARM_DPI_OP, vR(N), vR(SOP));
+		if(alubox(&vR(D), ARM_DPI_OP, vR(N), vR(SOP))) {
+			cracker_reg_dst_wb(cj, rrRD);
 
 			if(rR_IS_PC(D))
 				cracker_text(cj, vR(D));
-
-			cracker_reg_dst_wb(cj, rrRD);
 		}
 
 		if(0) if(rR_IS_PC(N)) {

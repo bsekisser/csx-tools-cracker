@@ -10,57 +10,54 @@
 
 /* **** */
 
-#define ALU_BOX_LIST(_ESAC) \
-	_ESAC(ARM_ADC, s1 + s2) \
-	_ESAC(ARM_ADD, s1 + s2) \
-	_ESAC(ARM_AND, s1 & s2) \
-	_ESAC(ARM_BIC, s1 & ~s2) \
-	_ESAC(ARM_CMN, s1 + s2) \
-	_ESAC(ARM_CMP, s1 - s2) \
-	_ESAC(ARM_EOR, s1 ^ s2) \
-	_ESAC(ARM_MOV, s2) \
-	_ESAC(ARM_MVN, -s2) \
-	_ESAC(ARM_ORR, s1 | s2) \
-	_ESAC(ARM_RSB, s2 - s1) \
-	_ESAC(ARM_RSC, s2 - s1) \
-	_ESAC(ARM_SBC, s1 - s2) \
-	_ESAC(ARM_SUB, s1 - s2) \
-	_ESAC(ARM_TEQ, s1 ^ s2) \
-	_ESAC(ARM_TST, s1 & s2)
-
-/* **** */
-
-#if 0
-	#define ENUM(_esac, _action) \
-		_esac,
-
-	enum {
-		ALU_BOX_LIST(ENUM)
-	};
-
-	#undef ENUM
-#endif
-
-/* **** */
-
-static inline uint32_t alubox(uint8_t op, uint32_t s1, uint32_t s2)
+static inline unsigned alubox(uint32_t* rd, uint8_t op, uint32_t s1, uint32_t s2)
 {
-#define SWITCH_CASE(_esac, _action) \
-	case _esac: \
-		return(_action);
+	unsigned wb = (2 != (op >> 2));
+
+	uint32_t result = 0;
 
 	switch(op) {
-		ALU_BOX_LIST(SWITCH_CASE)
-		default:
-			LOG("op = 0x%02x", op);
-			LOG_ACTION(exit(-1));
+	case ARM_ADC:
+	case ARM_ADD:
+	case ARM_CMN:
+		result = s1 + s2;
+		break;
+	case ARM_AND:
+	case ARM_TST:
+		result = s1 & s2;
+		break;
+	case ARM_BIC:
+		result = s1 & ~s2;
+		break;
+	case ARM_CMP:
+	case ARM_SBC:
+	case ARM_SUB:
+		result = s1 - s2;
+		break;
+	case ARM_EOR:
+	case ARM_TEQ:
+		result = s1 ^ s2;
+		break;
+	case ARM_MOV:
+		result = s2;
+		break;
+	case ARM_MVN:
+		result = -s2;
+		break;
+	case ARM_ORR:
+		result = s1 | s2;
+		break;
+	case ARM_RSB:
+	case ARM_RSC:
+		result = s2 - s1;
+		break;
+	default:
+		LOG("op = 0x%02x", op);
+		LOG_ACTION(exit(-1));
 	}
 
-	return(0);
+	if(rd)
+		*rd = result;
+
+	return(wb);
 }
-
-#undef SWITCH_CASE
-
-/* **** */
-
-#undef ALU_BOX_LIST

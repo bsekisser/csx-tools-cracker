@@ -229,8 +229,19 @@ uint32_t cracker_data_ptr_read(cracker_p cj, uint32_t pat, size_t size)
 {
 	cracker_data(cj, pat, sizeof(uint32_t));
 	pat = _read(cj, pat, sizeof(uint32_t));
+	return(cracker_data_read(cj, pat, size));
+}
+
+uint32_t cracker_data_read(cracker_p cj, uint32_t pat, size_t size)
+{
 	cracker_data(cj, pat, size);
 	return(_read(cj, pat, size));
+}
+
+int cracker_data_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data)
+{
+	cracker_data(cj, pat, size);
+	return(cracker_read_if(cj, pat, size, data));
 }
 
 void cracker_pass(cracker_p cj, int trace)
@@ -268,12 +279,13 @@ int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data)
 	if(__pat_out_of_bounds(cj, pat, size))
 		return(0);
 
-	uint8_t* src = cj->content.data;
-
+	uint32_t offset = pat - cj->content.base;
+	uint8_t* src = offset + cj->content.data;
+	uint8_t* src_limit = cj->content.data + cj->content.size;
+	
 	for(uint i = 0; i < size; i++) {
-		uint32_t offset = pat++ - cj->content.base;
-		*data |= ((src[offset]) << (i << 3));
-		if(pat > cj->content.end)
+		*data |= ((*src++) << (i << 3));
+		if(src > src_limit)
 			break;
 	}
 
