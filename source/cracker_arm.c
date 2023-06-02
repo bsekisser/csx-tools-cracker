@@ -518,19 +518,25 @@ static int arm_inst_ldstm(cracker_p cj)
 
 static int arm_inst_mla(cracker_p cj)
 {
-	setup_rR_src(M, ARM_IR_RM);
-	setup_rR_src(N, ARM_IR_RN);
-	setup_rR_src(S, ARM_IR_RS);
+	setup_rR_vR_src(M, ARM_IR_RM);
+	setup_rR_vR_src(N, ARM_IR_RN);
+	setup_rR_vR_src(S, ARM_IR_RS);
 
 	setup_rR_dst(D, ARM_IR_RD);
+
+	vR(D) = (vR(M) * vR(S)) + vR(N);
+	cracker_reg_dst_wb(cj, rrRD);
 
 	CORE_TRACE_START("MLA%s(", ARM_DPI_S ? "S" : "");
 	_CORE_TRACE_("%s", rR_NAME(D));
 	_CORE_TRACE_(", %s", rR_NAME(M));
 	_CORE_TRACE_(", %s", rR_NAME(S));
 	_CORE_TRACE_(", %s", rR_NAME(N));
-	CORE_TRACE_END("); /* %s = (%s * %s) + %s */",
-		rR_NAME(D), rR_NAME(M), rR_NAME(S), rR_NAME(N));
+
+	_CORE_TRACE_("); /* (0x%08x * 0x%08x) + 0x%08x = 0x%08x */",
+		vR(M), vR(S), vR(N), vR(D));
+
+	CORE_TRACE_END("XXX )");
 
 	return(cracker_text_end_if(cj, ARM_IP_NEXT, rR_IS_PC(D)));
 }
@@ -600,19 +606,114 @@ static int arm_inst_msr(cracker_p cj)
 	return(1);
 }
 
-static int arm_inst_umull(cracker_p cj)
+static int arm_inst_mul(cracker_p cj)
 {
+	if(0) LOG("0x%08x, RN = 0x%08x, RD = 0x%08x, RS = 0x%08x, RM = 0x%08x",
+		0x0ff00090 & IR, ARM_IR_RN, ARM_IR_RD, ARM_IR_RS, ARM_IR_RM);
+
+//	assert(0 == ARM_IR_RD);
+
+	setup_rR_vR_src(M, ARM_IR_RM);
+	setup_rR_vR_src(S, ARM_IR_RS);
+
+	setup_rR_dst(D, ARM_IR_RN); /* D -- !! RN !! */
+
+	vR(D) = vR(M) * vR(S);
+	cracker_reg_dst_wb(cj, rrRD);
+
+	CORE_TRACE_START("MUL%s(", ARM_DPI_S ? "S" : "");
+	_CORE_TRACE_("%s", rR_NAME(D));
+	_CORE_TRACE_(", %s", rR_NAME(M));
+	_CORE_TRACE_(", %s", rR_NAME(S));
+
+	_CORE_TRACE_("); /* 0x%08x * 0x%08x = 0x%08x */",
+		vR(M), vR(S), vR(D));
+
+	CORE_TRACE_END(" XXX )");
+
+	return(cracker_text_end_if(cj, ARM_IP_NEXT, rR_IS_PC(D)));
+}
+
+static int arm_inst_smul_xy(cracker_p cj)
+{
+//	LOG("0x%08x, 0x%08x", 0x0ff00090 & IR, ARM_IR_RD);
+	assert(0 == ARM_IR_RD);
+	
+	// 0x01600080 --- cccc 0001 | 0110 dddd | zzzz ssss | 1yx0 mmmm
+
+	const unsigned bit_y = BEXT(IR, 6);
+	const unsigned bit_x = BEXT(IR, 5);
+
 	setup_rR_src(S, ARM_IR_RS);
 	setup_rR_src(M, ARM_IR_RM);
+	
+	setup_rR_dst(D, ARM_IR_RN); /* D -- !! RN !! */
+	
+	CORE_TRACE_START("SMUL%c%c(", bit_x ? 'T' : 'B', bit_y ? 'T' : 'B');
+	_CORE_TRACE_("%s", rR_NAME(D));
+	_CORE_TRACE_(", %s", rR_NAME(M));
+	_CORE_TRACE_(", %s", rR_NAME(S));
+	CORE_TRACE_END(")");
+
+	return(cracker_text_end_if(cj, ARM_IP_NEXT, (rR_IS_PC(D)) || (rR_IS_PC(N))));
+}
+
+static int arm_inst_smull(cracker_p cj)
+{
+	setup_rR_vR_src(S, ARM_IR_RS);
+	setup_rR_vR_src(M, ARM_IR_RM);
 
 	setup_rR_dst(D, ARM_IR_RD);
 	setup_rR_dst(N, ARM_IR_RN);
+
+	int64_t result = (int32_t)vR(M) * (int32_t)vR(S);
+	
+	vR(D) = result & 0xffffffff;
+	cracker_reg_dst_wb(cj, rrRD);
+
+	vR(N) = (result >> 32) & 0xffffffff;
+	cracker_reg_dst_wb(cj, rrRN);
+
+	CORE_TRACE_START("SMULL%s(", ARM_DPI_S ? "S" : "");
+	_CORE_TRACE_("%s", rR_NAME(D));
+	_CORE_TRACE_(":%s", rR_NAME(N));
+	_CORE_TRACE_(", %s", rR_NAME(M));
+	_CORE_TRACE_(", %s", rR_NAME(S));
+	
+	_CORE_TRACE_("); /* 0x%08x * 0x%08x = 0x%016llx */",
+		vR(M), vR(S), result);
+
+	CORE_TRACE_END(" XXX )");
+
+	return(cracker_text_end_if(cj, ARM_IP_NEXT, (rR_IS_PC(D)) || (rR_IS_PC(N))));
+}
+
+static int arm_inst_umull(cracker_p cj)
+{
+	setup_rR_vR_src(S, ARM_IR_RS);
+	setup_rR_vR_src(M, ARM_IR_RM);
+
+	setup_rR_dst(D, ARM_IR_RD);
+	setup_rR_dst(N, ARM_IR_RN);
+
+	uint64_t result = (uint32_t)vR(M) * (uint32_t)vR(S);
+	
+	vR(D) = result & 0xffffffff;
+	cracker_reg_dst_wb(cj, rrRD);
+
+	vR(N) = (result >> 32) & 0xffffffff;
+	cracker_reg_dst_wb(cj, rrRN);
 
 	CORE_TRACE_START("UMULL%s(", ARM_DPI_S ? "S" : "");
 	_CORE_TRACE_("%s", rR_NAME(D));
 	_CORE_TRACE_(":%s", rR_NAME(N));
 	_CORE_TRACE_(", %s", rR_NAME(M));
-	CORE_TRACE_END(", %s", rR_NAME(S));
+	_CORE_TRACE_(", %s", rR_NAME(S));
+	
+	_CORE_TRACE_("); /* 0x%08x * 0x%08x = 0x%016llx */",
+		vR(M), vR(S), result);
+
+	CORE_TRACE_END(" XXX )");
 
 	return(cracker_text_end_if(cj, ARM_IP_NEXT, (rR_IS_PC(D)) || (rR_IS_PC(N))));
 }
@@ -650,9 +751,12 @@ static int arm_step__fail_decode(cracker_p cj)
 	switch(ARM_IR_27_25) {
 		case 0x00:
 		case 0x01:
-			_CORE_TRACE_(", DPI_OP = 0x%02x (%s), IR[7] = %0u, IR[4] = %0u",
-				ARM_DPI_OP, dpi_op_string[ARM_DPI_OP], BEXT(IR, 7), BEXT(IR, 4));
-			break;
+			if(ARM_IR_4and7) {
+				_CORE_TRACE_(", 0x0fe00090 & IR = 0x%08x", IR & 0x0fe00090);
+			} else {
+				_CORE_TRACE_(", DPI_OP = 0x%02x (%s), IR[7] = %0u, IR[4] = %0u",
+					ARM_DPI_OP, dpi_op_string[ARM_DPI_OP], BEXT(IR, 7), BEXT(IR, 4));
+			}break;
 		case 0x07:
 			_CORE_TRACE_(", IR[27:24] = 0x%02x, IR[4] = %u", mlBFEXT(IR, 27, 24), BEXT(IR, 4));
 			break;
@@ -660,11 +764,12 @@ static int arm_step__fail_decode(cracker_p cj)
 			break;
 	}
 
-	CORE_TRACE_END("/* XXX */");
+	CORE_TRACE_END(" /* XXX */");
 
 	cracker_disasm_arm(cj, IP, IR);
 	cracker_text_end(cj, IP);
-	LOG_ACTION(return(0));
+//	LOG_ACTION(return(0));
+	LOG_ACTION(exit(-1));
 }
 
 static int arm_step_group0_ldst(cracker_p cj)
@@ -678,11 +783,15 @@ static int arm_step_group0_ldst(cracker_p cj)
 		else
 			return(arm_inst_ldst_sh_register_offset(cj));
 	} else {
-		switch(mlBFEXT(IR, 27, 21)) {
-			case 0x01:
+		switch(mlBFTST(IR, 27, 21)) {
+			case 0x00000000:
+				return(arm_inst_mul(cj));
+			case 0x00200000:
 				return(arm_inst_mla(cj));
-			case 0x04:
+			case 0x00800000:
 				return(arm_inst_umull(cj));
+			case 0x00c00000:
+				return(arm_inst_smull(cj));
 		}
 	}
 
@@ -698,6 +807,12 @@ static int arm_step_group0_misc(cracker_p cj)
 	if((ARM_INST_MSR_I == (IR & ARM_INST_MSR_I_MASK))
 		|| (ARM_INST_MSR_R == (IR & ARM_INST_MSR_R_MASK)))
 			return(arm_inst_msr(cj));
+	else {
+		switch(mlBFTST(IR, 27, 20) | BTST(IR, 7) | BTST(IR, 4)) {
+			case 0x01600080:
+				return(arm_inst_smul_xy(cj));
+		}
+	}
 
 	LOG_ACTION(return(arm_step__fail_decode(cj)));
 }
