@@ -11,6 +11,7 @@
 /* **** */
 
 #define ALU_BOX_LIST(_ESAC) \
+	_ESAC(ARM_ADC, s1 + s2) \
 	_ESAC(ARM_ADD, s1 + s2) \
 	_ESAC(ARM_AND, s1 & s2) \
 	_ESAC(ARM_BIC, s1 & ~s2) \
@@ -21,6 +22,8 @@
 	_ESAC(ARM_MVN, -s2) \
 	_ESAC(ARM_ORR, s1 | s2) \
 	_ESAC(ARM_RSB, s2 - s1) \
+	_ESAC(ARM_RSC, s2 - s1) \
+	_ESAC(ARM_SBC, s1 - s2) \
 	_ESAC(ARM_SUB, s1 - s2) \
 	_ESAC(ARM_TEQ, s1 ^ s2) \
 	_ESAC(ARM_TST, s1 & s2)

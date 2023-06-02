@@ -42,6 +42,7 @@ enum {
 	SYMBOL_DATA,
 	SYMBOL_STRING,
 	SYMBOL_TEXT,
+	SYMBOL_TEXT_XXX,
 };
 
 enum {
@@ -177,6 +178,7 @@ void cracker_pass(cracker_p cj, int trace);
 int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data);
 int cracker_step(cracker_p cj);
 void cracker_symbol_end(symbol_p cjs, uint32_t pat, const char* name);
+size_t cracker_symbol_intergap(cracker_p cj, symbol_p lhs, symbol_p rhs);
 void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh);
 int cracker_symbol_step(cracker_p cj, symbol_p cjs);
 symbol_p cracker_text(cracker_p cj, uint32_t pat);

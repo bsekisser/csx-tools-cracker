@@ -1,5 +1,6 @@
 #include "cracker_arm_ir.h"
 #include "cracker_strings.h"
+#include "cracker_symbol.h"
 #include "cracker_trace.h"
 #include "cracker.h"
 #include "garmin.h"
@@ -22,6 +23,81 @@
 #include <unistd.h>
 
 /* **** */
+
+static int __scrounge_text_xxx(cracker_p cj) {
+	while(cracker_step(cj))
+		;
+
+	return(1);
+}
+
+static int _scrounge_block__arm(cracker_p cj) {
+	if(0 != (PC & 3))
+		return(1);
+
+	switch(IR & 0xff000000) {
+		case 0xea000000: /* b */
+			return(__scrounge_text_xxx(cj));
+	}
+
+	switch(IR & 0xfffff000) {
+		case 0xe28ff000: /* add pc, pc, #000 */
+		case 0xe59ff000: /* ldr pc, pc, #000 */
+			return(__scrounge_text_xxx(cj));
+	}
+
+	return(0);
+}
+
+static int _scrounge_block__thumb(cracker_p cj, uint16_t ir) {
+	PC |= 1;
+
+	if(0x4800 == (ir & 0xf800)) { /* ldr rr, pc, $000 */
+			return(__scrounge_text_xxx(cj));
+	} else if(0xb500 == (ir & 0xff00)) { /* push ...,lr */
+			return(__scrounge_text_xxx(cj));
+	}
+
+	return(0);
+}
+
+static void _scrounge_block(cracker_p cj, uint32_t start, uint32_t end) {
+	size_t byte_count = 1 + end - start;
+	LOG("start: 0x%08x, end: 0x%08x, byte_count = 0x%08zx", start, end, byte_count);
+
+	const uint32_t eend = end - sizeof(uint32_t);
+
+	start +=3;
+	start &= ~3;
+ 
+	for(PC = start; PC <= eend; PC += sizeof(uint32_t)) {
+		if(!cracker_read_if(cj, PC, sizeof(uint32_t), &IR))
+			return;
+
+		if(_scrounge_block__arm(cj)) {
+			;
+		} else if(_scrounge_block__thumb(cj, IR & 0xffff)) {
+			;
+		} else if(_scrounge_block__thumb(cj, (IR >> 16) & 0xffff)) {
+			;
+		}
+		
+		PC &= ~3;
+	}
+}
+
+static void _scrounge_pass(cracker_p cj) {
+	/* scrounge pass */
+	symbol_p rhs = cj->symbol_qhead;
+	
+	do {
+		symbol_p lhs = rhs;
+		rhs = symbol_next(0, rhs);
+		
+		if(rhs && cracker_symbol_intergap(cj, lhs, rhs))
+			_scrounge_block(cj, lhs->end_pat + 1, rhs->pat - 1);
+	}while(rhs);
+}
 
 static void load_content(cracker_content_p content, const char* file_name)
 {
@@ -126,7 +202,7 @@ int main(void)
 		for(uint i = 0; string_table[i]; i++)
 			cracker_data_rel_string(cj, string_table[i]);
 	}
-
+	
 	uint32_t src = cj->content.end;
 	do {
 		if(0xffffa55a == _read(cj, src, sizeof(uint32_t)))
@@ -163,7 +239,13 @@ int main(void)
 
 	for(cj->symbol_pass = 1; cj->symbol_count.added; cj->symbol_pass++)
 //	for(cj->symbol_pass = 1; cj->symbol_pass <= 3; cj->symbol_pass++)
+	{
 		cracker_pass(cj, 0);
+		
+		if(0 == cj->symbol_count.added) {
+			_scrounge_pass(cj);
+		}
+	}
 
 	cj->collect_refs = 1;
 	cj->symbol_pass = 0;

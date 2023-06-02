@@ -89,9 +89,10 @@ static int arm_inst_b_bl(cracker_p cj)
 
 static int arm_inst_bx(cracker_p cj)
 {
-	assert(0xf == mlBFEXT(IR, 19, 16));
-	assert(0xf == mlBFEXT(IR, 15, 12));
-	assert(0xf == mlBFEXT(IR, 11, 8));
+	if(!(0xf == mlBFEXT(IR, 19, 16))
+		|| !(0xf == mlBFEXT(IR, 15, 12))
+		|| !(0xf == mlBFEXT(IR, 11, 8)))
+			return(0);
 
 	const int link = BEXT(IR, 5);
 
@@ -488,7 +489,10 @@ static int arm_inst_ldstm(cracker_p cj)
 		_CORE_TRACE_("(%s%s, ", rR_NAME(N), ARM_IR_LDST_BIT(w21) ? ".WB " : "");
 	}
 
-	assert(0 == ARM_IR_LDSTM_BIT(s22));
+	if(!(0 == ARM_IR_LDSTM_BIT(s22))) {
+		CORE_TRACE_END("XXX");
+		return(0);
+	}
 
 	char reglist[17], *dst = reglist;
 
@@ -533,8 +537,9 @@ static int arm_inst_mla(cracker_p cj)
 
 static int arm_inst_mrs(cracker_p cj)
 {
-	assert(0xf == mlBFEXT(IR, 19, 16));
-	assert(0 == mlBFEXT(IR, 11, 0));
+	if(!(0xf == mlBFEXT(IR, 19, 16))
+		|| !(0 == mlBFEXT(IR, 11, 0)))
+			return(0);
 
 	setup_rR_dst(D, ARM_IR_RD);
 
@@ -548,7 +553,8 @@ static int arm_inst_mrs(cracker_p cj)
 
 static int arm_inst_msr(cracker_p cj)
 {
-	assert(0x0f == mlBFEXT(IR, 15, 12));
+	if(!(0x0f == mlBFEXT(IR, 15, 12)))
+		return(0);
 
 	CORE_TRACE_START();
 
@@ -706,7 +712,7 @@ static int arm_step_group0(cracker_p cj)
 				return(arm_step_group0_misc(cj));
 			else {
 				if(arm_step__dp_pre_validate(cj))
-					_return(arm_inst_dp_register_shift(cj));
+					return(arm_inst_dp_register_shift(cj));
 			}
 		}
 	} else {
@@ -717,6 +723,9 @@ static int arm_step_group0(cracker_p cj)
 				return(arm_inst_dp_immediate_shift(cj));
 		}
 	}
+
+	LOG("IR[24, 23] = %u, IR[20] = %u, IR[7] = %u, IR[4] = %u",
+		mlBFEXT(IR, 24, 23), BEXT(IR, 20), BEXT(IR, 7), BEXT(IR, 4));
 
 	LOG_ACTION(return(arm_step__fail_decode(cj)));
 }

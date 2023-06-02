@@ -379,7 +379,7 @@ void cracker_symbol__log_text(cracker_p cj, symbol_p cjs)
 		_LOG_(" }");
 	}
 
-	LOG_END(", TEXT ENTRY");
+	LOG_END(", TEXT ENTRY%s", BEXT(cjs->type, SYMBOL_TEXT_XXX) ? " XXX" : "");
 
 	if(cjs->in_bounds) {
 		PC = cjs->pat;
@@ -424,6 +424,20 @@ void cracker_symbol_end(symbol_p cjs, uint32_t pat, const char* name)
 	cjs->end_pat = end_pat;
 }
 
+size_t cracker_symbol_intergap(cracker_p cj, symbol_p lhs, symbol_p rhs)
+{
+	const uint32_t pat_bump = 3 >> lhs->thumb;
+	const uint32_t pat_mask = ~pat_bump;
+
+	const uint32_t lhs_end_pat = lhs->end_pat;
+	const uint32_t lhs_end_pat_bumped = (lhs_end_pat + pat_bump) & pat_mask;
+
+	const uint32_t rhs_pat = rhs->pat & (~3 >> rhs->thumb);
+
+	const size_t byte_count = rhs_pat - lhs_end_pat_bumped;
+	return(byte_count);
+}
+
 void cracker_symbol_log(cracker_p cj, symbol_p cjs)
 {
 	if(0 == cj->core.trace)
@@ -456,17 +470,10 @@ void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
 		cjs = symbol_next(0, cjs);
 
 		if(cjs) {
-			const uint32_t pat_bump = 3 >> lhs->thumb;
-			const uint32_t pat_mask = ~pat_bump;
-
-			const uint32_t cjs_pat = cjs->pat & (~3 >> cjs->thumb);
-			const uint32_t lhs_end_pat = lhs->end_pat;
-			const uint32_t lhs_end_pat_bumped = (lhs_end_pat + pat_bump) & pat_mask;
-
-			const uint32_t byte_count = cjs_pat - lhs_end_pat_bumped;
+			const size_t byte_count = cracker_symbol_intergap(cj, lhs, cjs);
 			if(byte_count) {
-				LOG("0x%08x -- 0x%08x === 0x%08x", lhs_end_pat, cjs_pat, byte_count);
-				cracker_dump_hex(cj, lhs_end_pat + 1, cjs_pat - 1);
+				LOG("0x%08x -- 0x%08x === 0x%08x", lhs->end_pat, cjs->pat, byte_count);
+				cracker_dump_hex(cj, lhs->end_pat + 1, cjs->pat - 1);
 				printf("\n");
 			}
 		}

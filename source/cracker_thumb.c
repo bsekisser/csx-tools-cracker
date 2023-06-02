@@ -633,10 +633,10 @@ static int thumb_step__fail_decode(cracker_p cj, int crap)
 		}
 	}
 
-	if(crap)
+	if(0 && crap)
 		LOG_ACTION(exit(-1));
 
-	cracker_text_end(cj, IP);
+//	cracker_text_end(cj, IP);
 	return(0);
 }
 
