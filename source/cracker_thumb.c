@@ -82,7 +82,7 @@ static int thumb_inst_add_sub_rn_rd(cracker_p cj)
 	if(bit_i)
 		setup_rR_vR(M, ~0, mlBFEXT(IR, 8, 6));
 	else
-		setup_rR_src(M, mlBFEXT(IR, 8, 6));
+		setup_rR_vR_src(M, mlBFEXT(IR, 8, 6));
 
 	setup_rR_vR_src(N, mlBFEXT(IR, 5, 3));
 
