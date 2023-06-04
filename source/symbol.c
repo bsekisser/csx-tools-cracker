@@ -1,9 +1,9 @@
-#include "cracker_symbol.h"
-#include "cracker.h"
+#include "symbol.h"
 
 /* **** */
 
 #include "bitfield.h"
+#include "queue.h"
 
 /* **** */
 
@@ -11,7 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* **** */ 
+/* **** */
 
 void symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs)
 {

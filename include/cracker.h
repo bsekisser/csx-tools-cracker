@@ -8,6 +8,8 @@ typedef struct cracker_t* cracker_p;
 
 #include "cracker_regs.h"
 
+#include "symbol.h"
+
 /* **** */
 
 #include "queue.h"
@@ -39,45 +41,6 @@ enum {
 };
 
 /* **** */
-
-enum {
-	SYMBOL_DATA,
-	SYMBOL_STRING,
-	SYMBOL_TEXT,
-	SYMBOL_TEXT_XXX,
-};
-
-enum {
-	SYMBOL_STRING_CSTRING,
-	SYMBOL_STRING_NSTRING,
-};
-
-typedef struct symbol_t** symbol_h;
-typedef struct symbol_t* symbol_p;
-typedef struct symbol_t {
-	qelem_t qelem;
-
-	uint32_t pat;
-	uint32_t end_pat;
-
-	uint pass;
-	uint refs;
-	struct {
-		uint dst;
-		uint src;
-	}reg;
-	size_t size;
-	uint type;
-	uint type_subtype;
-
-	union {
-		uint _flags;
-		struct {
-			uint in_bounds:1;
-			uint thumb:1;
-		};
-	};
-}symbol_t;
 
 typedef struct cracker_core_inst_t* cracker_core_inst_p;
 typedef struct cracker_core_inst_t {
@@ -180,13 +143,11 @@ uint32_t cracker_data_read(cracker_p cj, uint32_t pat, size_t size);
 int cracker_data_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data);
 symbol_p cracker_data_string_rel(cracker_p cj, uint32_t pat);
 symbol_p cracker_data_string(cracker_p cj, uint32_t pat);
+void cracker_dump_hex(cracker_p cj, uint32_t start, uint32_t end);
 void cracker_pass(cracker_p cj, int trace);
 int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data);
+int cracker_read_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src);
 int cracker_step(cracker_p cj);
-void cracker_symbol_end(symbol_p cjs, uint32_t pat, const char* name);
-size_t cracker_symbol_intergap(cracker_p cj, symbol_p lhs, symbol_p rhs);
-void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh);
-int cracker_symbol_step(cracker_p cj, symbol_p cjs);
 symbol_p cracker_text(cracker_p cj, uint32_t pat);
 int cracker_text_branch_link(cracker_p cj, uint32_t new_lr);
 symbol_p cracker_text_end(cracker_p cj, uint32_t pat);
