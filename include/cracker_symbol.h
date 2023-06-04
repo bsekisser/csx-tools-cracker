@@ -2,8 +2,6 @@
 
 /* **** */
 
-//#include "symbol.t"
-
 enum {
 	SYMBOL_DATA,
 	SYMBOL_STRING,

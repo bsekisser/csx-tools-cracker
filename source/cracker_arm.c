@@ -6,6 +6,7 @@
 #include "cracker_arm.h"
 #include "cracker_arm_enum.h"
 #include "cracker_arm_ir.h"
+#include "cracker_data.h"
 #include "cracker_disasm.h"
 #include "cracker_enum.h"
 #include "cracker_regs.h"
@@ -373,7 +374,7 @@ static int arm_inst_ldst_immediate(cracker_p cj)
 	const size_t size = ARM_IR_LDST_BIT(b22) ? sizeof(uint8_t) : sizeof(uint32_t);
 
 	if(rR_IS_PC(N) || rR_IS_PC_REF(N)) {
-		cracker_data(cj, pat, size);
+		cracker_data(cj, pat, size, 0);
 
 		_CORE_TRACE_("; /* [0x%08x]", pat);
 
@@ -442,7 +443,7 @@ static int arm_inst_ldst_sh_immediate_offset(cracker_p cj)
 		const uint32_t pat = vR(N) + offset;
 		const size_t size = ARM_IR_LDST_SH_FLAG_D ? 8 : (ARM_IR_LDST_SH_FLAG_H ? 2 : 1);
 
-		cracker_data(cj, pat, size);
+		cracker_data(cj, pat, size, 0);
 
 		_CORE_TRACE_("); /* [0x%08x] */", pat);
 	}

@@ -6,12 +6,14 @@
 
 #define THUMB_PC4 ((IP + 4) & ~3U)
 
-#include "cracker_thumb.h"
+/* **** */
 
 #include "cracker_arm_ir.h"
+#include "cracker_data.h"
 #include "cracker_disasm.h"
 #include "cracker_enum.h"
 #include "cracker_strings.h"
+#include "cracker_thumb.h"
 #include "cracker_trace.h"
 #include "cracker.h"
 

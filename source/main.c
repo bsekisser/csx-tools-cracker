@@ -1,4 +1,5 @@
 #include "cracker_arm_ir.h"
+#include "cracker_data.h"
 #include "cracker_strings.h"
 #include "cracker_symbol.h"
 #include "cracker_trace.h"
@@ -65,9 +66,11 @@ static symbol_p _scrounge_block__strings(cracker_p cj, uint32_t start, uint32_t 
 static int _scrounge_block__thumb(cracker_p cj, uint16_t ir) {
 	PC |= 1;
 
-	if(0x4800 == (ir & 0xf800)) { /* ldr rr, pc, $000 */
+	if(0xb500 == (ir & 0xff00)) { /* push ...,lr */
 			return(__scrounge_text_xxx(cj));
-	} else if(0xb500 == (ir & 0xff00)) { /* push ...,lr */
+	} else if(0xb400 == (ir & 0xfe00)) { /* push */
+			return(__scrounge_text_xxx(cj));
+	} else if(0x4800 == (ir & 0xf800)) { /* ldr rr, pc, $000 */
 			return(__scrounge_text_xxx(cj));
 	}
 
@@ -130,7 +133,10 @@ static void _scrounge_pass(cracker_p cj) {
 	do {
 		symbol_p lhs = rhs;
 		rhs = symbol_next(0, rhs);
-		
+
+		if(lhs == rhs)
+			return;
+
 		if(rhs && cracker_symbol_intergap(cj, lhs, rhs)) {
 			const uint32_t lhs_end_pat = 1 + lhs->end_pat;
 			const uint32_t rhs_pat = -1 + rhs->pat;
@@ -179,7 +185,7 @@ int main(void)
 	else
 		load_content(&cj->content, FIRMWARE_FileName);
 
-	cracker_data(cj, cj->content.end, sizeof(uint32_t));
+	cracker_data(cj, cj->content.end, sizeof(uint32_t), 0);
 	cracker_text(cj, cj->content.base);
 
 	if(0) if(loader) { // loader
@@ -248,7 +254,7 @@ int main(void)
 	uint32_t src = cj->content.end;
 	do {
 		if(0xffffa55a == _read(cj, src, sizeof(uint32_t)))
-			cracker_data(cj, src, sizeof(uint32_t));
+			cracker_data(cj, src, sizeof(uint32_t), 0);
 		else {
 			uint32_t word = _read(cj, src, sizeof(uint16_t));
 			
@@ -256,7 +262,7 @@ int main(void)
 //				case 0x55aa: /* fat marker */
 				case 0x5aa5:
 				case 0xa55a:
-					cracker_data(cj, src, sizeof(uint16_t));
+					cracker_data(cj, src, sizeof(uint16_t), 0);
 					break;
 			}
 		}

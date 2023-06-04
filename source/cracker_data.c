@@ -2,6 +2,8 @@
 #include "cracker_symbol.h"
 #include "cracker.h"
 
+#include "symbol.h"
+
 /* **** */
 
 #include "bitfield.h"
@@ -32,7 +34,7 @@ symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size, size_t len)
 		cjs = symbol_new(pat, size, SYMBOL_DATA);
 		cjs->end_pat = -1 + (pat + (len ? len : size));
 
-		_cracker_symbol_enqueue(sqh, lhs, cjs);
+		cracker_symbol_enqueue(sqh, lhs, cjs);
 	}
 
 	return(cjs);
@@ -65,20 +67,24 @@ symbol_p cracker_data_string(cracker_p cj, uint32_t start)
 	uint32_t data = 0;
 	do {
 		if(!cracker_data_read_if(cj, start, sizeof(uint8_t), &data))
-			return;
+			return(0);
+
 		if(' ' != data)
 			break;
+
 		start++;
 	}while(' ' == data);
 
 	uint32_t pat = start;
 	do {
 		if(!cracker_data_read_if(cj, pat, sizeof(uint8_t), &data))
-			return;
+			return(0);
+
 		if((data < ' ') || (data > 0x7e)) {
 			subtype = SYMBOL_STRING_NSTRING;
 			break;
 		}
+
 		pat++;
 	}while(0 != data);
 
