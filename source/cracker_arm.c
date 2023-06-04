@@ -763,8 +763,8 @@ static int arm_step__fail_decode(cracker_p cj)
 
 	cracker_disasm_arm(cj, IP, IR);
 	cracker_text_end(cj, IP);
-//	LOG_ACTION(return(0));
-	LOG_ACTION(exit(-1));
+	LOG_ACTION(return(0));
+//	LOG_ACTION(exit(-1));
 }
 
 static int arm_step_group0_ldst(cracker_p cj)

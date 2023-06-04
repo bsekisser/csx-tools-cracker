@@ -33,7 +33,7 @@ static int __scrounge_text_xxx(cracker_p cj) {
 
 static int _scrounge_block__arm(cracker_p cj) {
 	if(0 != (PC & 3))
-		return(1);
+		return(0);
 
 	switch(IR & 0xff000000) {
 		case 0xea000000: /* b */
@@ -49,6 +49,19 @@ static int _scrounge_block__arm(cracker_p cj) {
 	return(0);
 }
 
+static symbol_p _scrounge_block__strings(cracker_p cj, uint32_t start, uint32_t end) {
+	const size_t byte_count = 1 + end - start;
+	LOG("start: 0x%08x, end: 0x%08x, byte_count = 0x%08zx", start, end, byte_count);
+
+	for(uint32_t pat = start; pat < end; pat++) {
+		symbol_p cjs = cracker_data_string(cj, pat);
+		if(cjs)
+			return(cjs);
+	}
+	
+	return(0);
+}
+
 static int _scrounge_block__thumb(cracker_p cj, uint16_t ir) {
 	PC |= 1;
 
@@ -61,29 +74,53 @@ static int _scrounge_block__thumb(cracker_p cj, uint16_t ir) {
 	return(0);
 }
 
-static void _scrounge_block(cracker_p cj, uint32_t start, uint32_t end) {
-	size_t byte_count = 1 + end - start;
+static int _scrounge_block(cracker_p cj, uint32_t start, uint32_t end) {
+	const size_t byte_count = 1 + end - start;
 	LOG("start: 0x%08x, end: 0x%08x, byte_count = 0x%08zx", start, end, byte_count);
 
-	const uint32_t eend = end - sizeof(uint32_t);
+	const uint32_t eend = end - sizeof(uint16_t);
 
-	start +=3;
-	start &= ~3;
- 
-	for(PC = start; PC <= eend; PC += sizeof(uint32_t)) {
-		if(!cracker_read_if(cj, PC, sizeof(uint32_t), &IR))
-			return;
+	for(PC = start & ~1; PC < eend; PC += sizeof(uint16_t)) {
+		const size_t size = (PC & 3) ? sizeof(uint16_t) : sizeof(uint32_t);
+		if(!cracker_read_if(cj, PC, size, &IR))
+			break;
 
-		if(_scrounge_block__arm(cj)) {
-			;
-		} else if(_scrounge_block__thumb(cj, IR & 0xffff)) {
-			;
-		} else if(_scrounge_block__thumb(cj, (IR >> 16) & 0xffff)) {
-			;
+		switch(PC & 3) {
+			case 0:
+				if(_scrounge_block__arm(cj))
+					return(1);
+				else if(_scrounge_block__thumb(cj, IR & 0xffff))
+					return(1);
+				else if(_scrounge_block__thumb(cj, (IR >> 16) & 0xffff))
+					return(1);
+				break;
+			case 2:
+				if(_scrounge_block__thumb(cj, IR & 0xffff))
+					return(1);
+				break;
 		}
-		
-		PC &= ~3;
 	}
+
+	return(0);
+}
+
+static void _scrounge_pass_strings(cracker_p cj) {
+	/* scrounge pass */
+	symbol_p rhs = cj->symbol_qhead;
+	
+	do {
+		symbol_p lhs = rhs;
+		rhs = symbol_next(0, rhs);
+		
+		if(rhs && cracker_symbol_intergap(cj, lhs, rhs)) {
+			const uint32_t lhs_end_pat = 1 + lhs->end_pat;
+			const uint32_t rhs_pat = -1 + rhs->pat;
+			
+			symbol_p cjs = _scrounge_block__strings(cj, lhs_end_pat, rhs_pat);
+			if(cjs)
+				rhs = cjs;
+		}
+	}while(rhs);
 }
 
 static void _scrounge_pass(cracker_p cj) {
@@ -94,8 +131,13 @@ static void _scrounge_pass(cracker_p cj) {
 		symbol_p lhs = rhs;
 		rhs = symbol_next(0, rhs);
 		
-		if(rhs && cracker_symbol_intergap(cj, lhs, rhs))
-			_scrounge_block(cj, lhs->end_pat + 1, rhs->pat - 1);
+		if(rhs && cracker_symbol_intergap(cj, lhs, rhs)) {
+			const uint32_t lhs_end_pat = 1 + lhs->end_pat;
+			const uint32_t rhs_pat = -1 + rhs->pat;
+			
+			if(_scrounge_block(cj, lhs_end_pat, rhs_pat))
+				return;
+		}
 	}while(rhs);
 }
 
@@ -200,7 +242,7 @@ int main(void)
 		};
 		
 		for(uint i = 0; string_table[i]; i++)
-			cracker_data_rel_string(cj, string_table[i]);
+			cracker_data_string_rel(cj, string_table[i]);
 	}
 	
 	uint32_t src = cj->content.end;
@@ -246,6 +288,8 @@ int main(void)
 			_scrounge_pass(cj);
 		}
 	}
+
+	_scrounge_pass_strings(cj);
 
 	cj->collect_refs = 1;
 	cj->symbol_pass = 0;

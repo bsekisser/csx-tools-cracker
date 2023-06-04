@@ -144,6 +144,7 @@ typedef struct cracker_t {
 	struct {
 			uint added;
 			uint data;
+			uint string;
 			uint text;
 	}symbol_count;
 
@@ -173,11 +174,12 @@ typedef struct cracker_t {
 
 uint32_t _read(cracker_p cj, uint32_t pat, size_t size);
 void cracker_clear(cracker_p cj);
-symbol_p cracker_data_rel_string(cracker_p cj, uint32_t pat);
 symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size);
 uint32_t cracker_data_ptr_read(cracker_p cj, uint32_t pat, size_t size);
 uint32_t cracker_data_read(cracker_p cj, uint32_t pat, size_t size);
 int cracker_data_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data);
+symbol_p cracker_data_string_rel(cracker_p cj, uint32_t pat);
+symbol_p cracker_data_string(cracker_p cj, uint32_t pat);
 void cracker_pass(cracker_p cj, int trace);
 int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data);
 int cracker_step(cracker_p cj);
