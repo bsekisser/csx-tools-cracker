@@ -14,8 +14,10 @@
 
 /* **** */
 
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -54,13 +56,17 @@ static symbol_p _scrounge_block__strings(cracker_p cj, uint32_t start, uint32_t 
 	const size_t byte_count = 1 + end - start;
 	LOG("start: 0x%08x, end: 0x%08x, byte_count = 0x%08zx", start, end, byte_count);
 
+	if(!cracker_pat_bounded(cj, &start, &end))
+		return(0);
+
+	symbol_p cjs = 0;
 	for(uint32_t pat = start; pat < end; pat++) {
-		symbol_p cjs = cracker_data_string(cj, pat);
+		cjs = cracker_data_string(cj, pat);
 		if(cjs)
-			return(cjs);
+			break;
 	}
 	
-	return(0);
+	return(cjs);
 }
 
 static int _scrounge_block__thumb(cracker_p cj, uint16_t ir) {
@@ -80,6 +86,9 @@ static int _scrounge_block__thumb(cracker_p cj, uint16_t ir) {
 static int _scrounge_block(cracker_p cj, uint32_t start, uint32_t end) {
 	const size_t byte_count = 1 + end - start;
 	LOG("start: 0x%08x, end: 0x%08x, byte_count = 0x%08zx", start, end, byte_count);
+
+	if(!cracker_pat_bounded(cj, &start, &end))
+		return(0);
 
 	const uint32_t eend = end - sizeof(uint16_t);
 
@@ -114,14 +123,23 @@ static void _scrounge_pass_strings(cracker_p cj) {
 	do {
 		symbol_p lhs = rhs;
 		rhs = symbol_next(0, rhs);
-		
-		if(rhs && cracker_symbol_intergap(cj, lhs, rhs)) {
-			const uint32_t lhs_end_pat = 1 + lhs->end_pat;
-			const uint32_t rhs_pat = -1 + rhs->pat;
-			
-			symbol_p cjs = _scrounge_block__strings(cj, lhs_end_pat, rhs_pat);
-			if(cjs)
-				rhs = cjs;
+
+		assert(lhs != rhs);
+
+		if(rhs) {
+			if(0 < cracker_symbol_intergap(cj, lhs, rhs)) {
+				const uint32_t lhs_end_pat = 1 + lhs->end_pat;
+				const uint32_t rhs_pat = -1 + rhs->pat;
+				
+				symbol_p cjs = _scrounge_block__strings(cj, lhs_end_pat, rhs_pat);
+				if(cjs) {
+					LOG("lhs = 0x%08" PRIxPTR ", cjs = 0x%08" PRIxPTR ", rhs = 0x%08" PRIxPTR,
+						(uintptr_t)lhs, (uintptr_t)cjs, (uintptr_t)rhs);
+
+					LOG("cjs.start = 0x%08x, cjs.end = 0x%08x", cjs->pat, cjs->end_pat);
+					rhs = cjs;
+				}
+			}
 		}
 	}while(rhs);
 }
@@ -134,15 +152,16 @@ static void _scrounge_pass(cracker_p cj) {
 		symbol_p lhs = rhs;
 		rhs = symbol_next(0, rhs);
 
-		if(lhs == rhs)
-			return;
+		assert(lhs != rhs);
 
-		if(rhs && cracker_symbol_intergap(cj, lhs, rhs)) {
-			const uint32_t lhs_end_pat = 1 + lhs->end_pat;
-			const uint32_t rhs_pat = -1 + rhs->pat;
-			
-			if(_scrounge_block(cj, lhs_end_pat, rhs_pat))
-				return;
+		if(rhs) {
+			if(0 < cracker_symbol_intergap(cj, lhs, rhs)) {
+				const uint32_t lhs_end_pat = 1 + lhs->end_pat;
+				const uint32_t rhs_pat = -1 + rhs->pat;
+				
+				if(_scrounge_block(cj, lhs_end_pat, rhs_pat))
+					return;
+			}
 		}
 	}while(rhs);
 }
@@ -166,6 +185,8 @@ static void load_content(cracker_content_p content, const char* file_name)
 	close(fd);
 
 	content->data = data;
+	content->data_limit = data + sb.st_size;
+	
 	content->base = 0x10020000;
 	content->size = sb.st_size;
 	content->end = content->base + content->size;
@@ -253,10 +274,10 @@ int main(void)
 	
 	uint32_t src = cj->content.end;
 	do {
-		if(0xffffa55a == _read(cj, src, sizeof(uint32_t)))
+		if(0xffffa55a == cracker_read(cj, src, sizeof(uint32_t)))
 			cracker_data(cj, src, sizeof(uint32_t), 0);
 		else {
-			uint32_t word = _read(cj, src, sizeof(uint16_t));
+			uint32_t word = cracker_read(cj, src, sizeof(uint16_t));
 			
 			switch(word) {
 //				case 0x55aa: /* fat marker */
@@ -271,7 +292,7 @@ int main(void)
 	} while(src > cj->content.base);
 	
 	PC = cj->content.base;
-	IR = _read(cj, PC, sizeof(uint32_t));
+	IR = cracker_read(cj, PC, sizeof(uint32_t));
 	PC += sizeof(uint32_t);
 	switch(IR) {
 		case 0xea000002:

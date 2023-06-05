@@ -32,37 +32,6 @@
 
 /* **** */
 
-static int __pat_out_of_bounds(cracker_p cj, uint32_t pat, size_t size)
-{
-	int oob = pat < cj->content.base;
-	oob |= pat > (cj->content.end - size);
-
-	return(oob);
-}
-
-static uint8_t* _check_bounds(cracker_p cj, uint32_t pat, size_t size, void **p2ptr)
-{
-	if(__pat_out_of_bounds(cj, pat, size))
-		return(0);
-
-	uint8_t* target = cj->content.data + (pat - cj->content.base);
-
-	if(p2ptr)
-		*p2ptr = target;
-
-	return(target);
-}
-
-uint32_t _read(cracker_p cj, uint32_t pat, size_t size)
-{
-	uint32_t data = 0;
-
-	cracker_read_if(cj, pat, size, &data);
-	return(data);
-}
-
-/* **** */
-
 void cracker_clear(cracker_p cj)
 {
 	for(int i = 0; i < 16; i++) {
@@ -110,9 +79,8 @@ void cracker_dump_hex(cracker_p cj, uint32_t start, uint32_t end)
 //	const unsigned stride = 15;
 //	const unsigned stride = 7;
 
-	if(__pat_out_of_bounds(cj, start, 1)
-		|| __pat_out_of_bounds(cj, end, stride))
-			return;
+	if(cracker_pat_range_out_of_bounds(cj, start + 1, end - stride))
+		return;
 
 	if(end < start)
 		LOG_ACTION(return);
@@ -132,18 +100,19 @@ void cracker_dump_hex(cracker_p cj, uint32_t start, uint32_t end)
 		*dst = 0;
 
 		for(unsigned count = stride + 1; count; count--, pat++) {
-			int valid = (pat >= start) && (pat <= end);
+			const int valid_range = (pat >= start) && (pat <= end);
 
-			uint8_t data = valid ? _read(cj, pat, sizeof(uint8_t)) : 0;
-			uint8_t c = ((data < ' ') || (data > 0x7e))  ? '.' : data;
+			uint8_t c = '.';
 
-			*dst++ = valid ? c : ' ';
+			if(valid_range) {
+				c = cracker_read(cj, pat, sizeof(uint8_t)) & 0xff;
 
-			if(valid) {
-				printf("%02x ", data & 0xff);
-			} else {
+				printf("%02x ", c);
+				c = ((c < ' ') || (c > 0x7e)) ? '.' : c;
+			} else
 				printf("   ");
-			}
+
+			*dst++ = c;
 		}
 
 		*dst = 0;
@@ -183,32 +152,90 @@ void cracker_pass(cracker_p cj, int trace)
 
 /* **** */
 
-int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data)
+int cracker_pat_bounded(cracker_p cj, uint32_t* p2start, uint32_t* p2end)
 {
-	uint8_t* src = 0;
-	if(!cracker_read_src_if(cj, pat, size, &src))
+	if(*p2end <= cj->content.base)
 		return(0);
-	
-	uint8_t* src_limit = cj->content.data + cj->content.size;
-	
-	for(uint i = 0; i < size; i++) {
-		*data |= ((*src++) << (i << 3));
-		if(src > src_limit)
-			break;
-	}
+
+	if(*p2start >= cj->content.end)
+		return(0);
+
+	if(*p2end > cj->content.end)
+		*p2end = cj->content.end;
+
+	if(*p2start < cj->content.base)
+		*p2start = cj->content.base;
 
 	return(1);
 }
 
-int cracker_read_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src)
+int cracker_pat_out_of_bounds(cracker_p cj, uint32_t pat, size_t size)
+{
+	if(pat < cj->content.base)
+		return(1);
+	
+	if(pat > (cj->content.end - size))
+		return(1);
+
+	return(0);
+}
+
+int cracker_pat_range_out_of_bounds(cracker_p cj, uint32_t start, uint32_t end)
+{
+	if(cracker_pat_out_of_bounds(cj, start, 0))
+		return(1);
+
+	if(cracker_pat_out_of_bounds(cj, end, 0))
+		return(1);
+
+	return(0);
+}
+
+int cracker_pat_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src)
 {
 	assert(0 != src);
 
-	if(__pat_out_of_bounds(cj, pat, size))
+	if(cracker_pat_out_of_bounds(cj, pat, size))
 		return(0);
 
-	uint32_t offset = pat - cj->content.base;
+	const uint32_t offset = pat - cj->content.base;
 	*src = offset + cj->content.data;
+
+	return(1);
+}
+
+int cracker_pat_src_limit_if(cracker_p cj, uint32_t pat, uint8_t** src_start, uint8_t** src_limit)
+{
+	assert(0 != src_limit);
+	assert(0 != src_start);
+
+	if(!cracker_pat_src_if(cj, pat, sizeof(uint8_t), src_start))
+		return(0);
+
+	*src_limit = cj->content.data_limit;
+	return(1);
+}
+
+/* **** */
+
+uint32_t cracker_read(cracker_p cj, uint32_t pat, size_t size)
+{
+	uint32_t data = 0;
+	
+	cracker_read_if(cj, pat, size, &data);
+	return(data);
+}
+
+int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data)
+{
+	*data = 0;
+
+	uint8_t* src = 0;
+	if(!cracker_pat_src_if(cj, pat, size, &src))
+		return(0);
+
+	for(unsigned i = 0; i < size; i++)
+		*data |= (*src++ << (i << 3));
 
 	return(1);
 }
@@ -217,9 +244,7 @@ int cracker_read_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src)
 
 int cracker_step(cracker_p cj)
 {
-	IP = PC;
-
-	if(IP & 1)
+	if(PC & 1)
 		return(thumb_step(cj));
 
 	return(arm_step(cj));
@@ -250,7 +275,7 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 		cjs = symbol_new(pat, sizeof(uint32_t), SYMBOL_TEXT);
 
 		cjs->end_pat = ~0U;
-		cjs->in_bounds = (0 != _check_bounds(cj, pat, sizeof(uint32_t), 0));
+		cjs->in_bounds = !cracker_pat_out_of_bounds(cj, pat, sizeof(uint32_t));
 		cjs->thumb = thumb;
 
 		cracker_symbol_enqueue(sqh, lhs, cjs);

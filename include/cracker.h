@@ -87,8 +87,10 @@ typedef struct cracker_core_t {
 
 typedef struct cracker_content_t* cracker_content_p;
 typedef struct cracker_content_t {
-		uint32_t base;
 		void* data;
+		void* data_limit;
+
+		uint32_t base;
 		uint32_t end;
 		size_t size;
 }cracker_content_t;
@@ -135,10 +137,15 @@ typedef struct cracker_t {
 
 /* **** */
 
-uint32_t _read(cracker_p cj, uint32_t pat, size_t size);
 void cracker_clear(cracker_p cj);
 void cracker_dump_hex(cracker_p cj, uint32_t start, uint32_t end);
 void cracker_pass(cracker_p cj, int trace);
+int cracker_pat_bounded(cracker_p cj, uint32_t* p2start, uint32_t* p2end);
+int cracker_pat_out_of_bounds(cracker_p cj, uint32_t pat, size_t size);
+int cracker_pat_range_out_of_bounds(cracker_p cj, uint32_t start, uint32_t end);
+int cracker_pat_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src);
+int cracker_pat_src_limit_if(cracker_p cj, uint32_t pat, uint8_t** src, uint8_t** src_limit);
+uint32_t cracker_read(cracker_p cj, uint32_t pat, size_t size);
 int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data);
 int cracker_read_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src);
 int cracker_step(cracker_p cj);

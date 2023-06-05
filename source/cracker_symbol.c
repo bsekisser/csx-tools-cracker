@@ -58,7 +58,7 @@ static void cracker_symbol__log_data(cracker_p cj, symbol_p cjs) {
 }
 
 static void cracker_symbol__log_string(cracker_p cj, symbol_p cjs) {
-	size_t len = 1 + (cjs->end_pat - cjs->pat);
+	const size_t len = 1 + (cjs->end_pat - cjs->pat);
 
 	LOG_START("0x%08x -- 0x%08x:", cjs->pat, cjs->end_pat);
 
@@ -67,7 +67,7 @@ static void cracker_symbol__log_string(cracker_p cj, symbol_p cjs) {
 	_LOG_(", len: 0x%04x", len);
 
 	uint8_t* src = 0;
-	if(cracker_read_src_if(cj, cjs->pat, sizeof(uint8_t), &src)) {
+	if(cracker_pat_src_if(cj, cjs->pat, sizeof(uint8_t), &src)) {
 		switch(cjs->type_subtype) {
 			case SYMBOL_STRING_CSTRING:
 				_LOG_(":: %s", src);
@@ -160,6 +160,12 @@ void cracker_symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs)
 		cracker_symbol_end(cjs, rhs->pat, "cracker_symbol_enqueue -- rhs");
 
 	symbol_enqueue(h2sqh, lhs, cjs);
+}
+
+symbol_p cracker_symbol_find(cracker_p cj, symbol_h h2lhs, uint32_t pat, uint32_t mask)
+{
+	symbol_h sqh = &cj->symbol_qhead;
+	return(symbol_find_pat(sqh, h2lhs, pat, mask));
 }
 
 size_t cracker_symbol_intergap(cracker_p cj, symbol_p lhs, symbol_p rhs)

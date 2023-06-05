@@ -33,11 +33,12 @@
 
 /* **** */
 
-static uint32_t _fetch(cracker_p cj)
+static int _fetch(cracker_p cj, uint32_t* p2ir)
 {
-	PC += sizeof(uint32_t);
+	IP = PC & ~3U;
+	PC = IP + sizeof(uint32_t);
 
-	return(_read(cj, IP & ~3U, sizeof(uint32_t)));
+	return(cracker_read_if(cj, IP, sizeof(uint32_t), p2ir));
 }
 
 static void _shifter_operand(cracker_p cj)
@@ -374,14 +375,9 @@ static int arm_inst_ldst_immediate(cracker_p cj)
 	const size_t size = ARM_IR_LDST_BIT(b22) ? sizeof(uint8_t) : sizeof(uint32_t);
 
 	if(rR_IS_PC(N) || rR_IS_PC_REF(N)) {
-		cracker_data(cj, pat, size, 0);
-
 		_CORE_TRACE_("; /* [0x%08x]", pat);
 
-		if(rR_IS_PC(N)) {
-			vR(D) = _read(cj, pat, size);
-			cracker_reg_dst_wb(cj, rrRD);
-
+		if(cracker_data_read_if(cj, pat, size, &vR(D))) {
 			if(ARM_IR_LDST_BIT(b22)) {
 				_CORE_TRACE_(":0x%02x", vR(D));
 			} else {
@@ -391,6 +387,8 @@ static int arm_inst_ldst_immediate(cracker_p cj)
 
 		_CORE_TRACE_(" */");
 	}
+
+	cracker_reg_dst_wb(cj, rrRD);
 
 	CORE_TRACE_END();
 
@@ -872,7 +870,8 @@ static int arm_step_group7(cracker_p cj)
 
 int arm_step(cracker_p cj)
 {
-	IR = _fetch(cj);
+	if(!_fetch(cj, &IR))
+		return(0);
 
 	if(CC_NV != ARM_IR_CC) {
 		switch(ARM_IR_27_25) {

@@ -33,11 +33,12 @@
 
 /* **** */
 
-static int _fetch(cracker_p cj)
+static int _fetch(cracker_p cj, uint32_t* p2ir)
 {
-	PC += sizeof(uint16_t);
+	IP = PC & ~1U;
+	PC = 1 | (IP + sizeof(uint16_t));
 
-	return(_read(cj, IP & ~1U, sizeof(uint16_t)));
+	return(cracker_read_if(cj, IP, sizeof(uint16_t), p2ir));
 }
 
 /* **** */
@@ -293,7 +294,7 @@ static int thumb_inst_bxx_prefix(cracker_p cj)
 
 	LR = THUMB_PC + eao_prefix;
 
-	const uint32_t ir_suffix = _read(cj, THUMB_IP_NEXT, sizeof(uint16_t));
+	const uint32_t ir_suffix = cracker_read(cj, THUMB_IP_NEXT, sizeof(uint16_t));
 	if(0xe800 == (ir_suffix & 0xe800)) {
 		const int blx = 1 ^ BEXT(ir_suffix, 12);
 
@@ -814,7 +815,9 @@ static int thumb_step_group7_e000_ffff(cracker_p cj)
 
 int thumb_step(cracker_p cj)
 {
-	IR = _fetch(cj);
+	if(!_fetch(cj, &IR))
+		return(0);
+
 	CCv = CC_AL;
 
 	uint32_t group = mlBFTST(IR, 15, 13);
