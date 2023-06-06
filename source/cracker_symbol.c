@@ -168,7 +168,7 @@ symbol_p cracker_symbol_find(cracker_p cj, symbol_h h2lhs, uint32_t pat, uint32_
 	return(symbol_find_pat(sqh, h2lhs, pat, mask));
 }
 
-size_t cracker_symbol_intergap(cracker_p cj, symbol_p lhs, symbol_p rhs)
+int32_t cracker_symbol_intergap(cracker_p cj, symbol_p lhs, symbol_p rhs)
 {
 	const uint32_t pat_bump = 3 >> lhs->thumb;
 	const uint32_t pat_mask = ~pat_bump;
@@ -179,7 +179,7 @@ size_t cracker_symbol_intergap(cracker_p cj, symbol_p lhs, symbol_p rhs)
 
 	const uint32_t rhs_pat = rhs->pat & (~3 >> rhs->thumb);
 
-	const size_t byte_count = rhs_pat - lhs_end_pat_bumped;
+	const int32_t byte_count = rhs_pat - lhs_end_pat_bumped;
 
 	return(byte_count);
 	UNUSED(cj);

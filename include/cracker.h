@@ -150,7 +150,9 @@ int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data);
 int cracker_read_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src);
 int cracker_step(cracker_p cj);
 symbol_p cracker_text(cracker_p cj, uint32_t pat);
-int cracker_text_branch_link(cracker_p cj, uint32_t new_lr);
+int cracker_text_branch(cracker_p cj, unsigned cc, uint32_t new_pc);
+int cracker_text_branch_and_link(cracker_p cj, unsigned cc, uint32_t new_pc, uint32_t new_lr);
+int cracker_text_branch_link(cracker_p cj, unsigned cc, uint32_t new_lr);
 symbol_p cracker_text_end(cracker_p cj, uint32_t pat);
 int cracker_text_end_if(cracker_p cj, uint32_t pat, int end);
 

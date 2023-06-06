@@ -284,11 +284,30 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 	return(cjs);
 }
 
-int cracker_text_branch_link(cracker_p cj, uint32_t new_lr)
+int cracker_text_branch(cracker_p cj, unsigned bcc, uint32_t new_pc)
 {
+	PC = new_pc;
+	cracker_text(cj, new_pc);
+	
+	return(0);
+	UNUSED(bcc);
+}
+
+int cracker_text_branch_link(cracker_p cj, unsigned bcc, uint32_t new_lr)
+{
+	LR = new_lr;
 	cracker_text(cj, new_lr);
 
 	return(0);
+	UNUSED(bcc);
+}
+
+int cracker_text_branch_and_link(cracker_p cj, unsigned bcc, uint32_t new_pc, uint32_t new_lr)
+{
+	cracker_text_branch_link(cj, bcc, new_lr);
+
+	return(cracker_text_branch(cj, bcc, new_pc));
+	UNUSED(bcc);
 }
 
 symbol_p cracker_text_end(cracker_p cj, uint32_t pat)

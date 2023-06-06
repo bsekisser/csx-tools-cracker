@@ -35,10 +35,10 @@
 
 static int _fetch(cracker_p cj, uint32_t* p2ir)
 {
-	IP = PC & ~1U;
-	PC = 1 | (IP + sizeof(uint16_t));
+	IP = PC;
+	PC += sizeof(uint16_t);
 
-	return(cracker_read_if(cj, IP, sizeof(uint16_t), p2ir));
+	return(cracker_read_if(cj, IP & ~1U, sizeof(uint16_t), p2ir));
 }
 
 /* **** */
@@ -203,24 +203,21 @@ static int thumb_inst_b(cracker_p cj)
 
 	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x*/", new_pc & ~1, THUMB_PC, eao);
 
-	cracker_text(cj, new_pc);
-
-	return(0);
+	return(cracker_text_branch(cj, CC_AL, new_pc));
 }
 
 static int thumb_inst_bcc(cracker_p cj)
 {
 	CCv = mlBFEXT(IR, 11, 8);
+
 	const int32_t imm8 = mlBFMOVs(IR, 7, 0, 1);
 
 	const uint32_t new_pc = (THUMB1_PC + imm8);
 
 	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x */", new_pc & ~1, THUMB_PC, imm8);
 
-	cracker_text(cj, new_pc);
-
-	LR = THUMB1_IP_NEXT;
-	return(cracker_text_branch_link(cj, LR));
+	cracker_text(cj, THUMB1_IP_NEXT);
+	return(cracker_text_branch(cj, CCv, new_pc));
 }
 
 static int thumb_inst_bx_blx(cracker_p cj)
@@ -236,16 +233,15 @@ static int thumb_inst_bx_blx(cracker_p cj)
 	if(rR_IS_PC_REF(M)) {
 		const int thumb = vR(M) & 1;
 		_CORE_TRACE_("; /* %c(0x%08x) */", thumb ? 'T' : 'A', vR(M));
-
-		cracker_text(cj, vR(M));
 	}
 
 	CORE_TRACE_END();
 
-	if(link) {
-		LR = THUMB1_IP_NEXT;
-		return(cracker_text_branch_link(cj, LR));
-	}
+	if(link)
+		cracker_text_branch_link(cj, CC_AL, THUMB1_IP_NEXT);
+
+	if(rR_IS_PC_REF(M))
+		return(cracker_text_branch(cj, CC_AL, vR(M)));
 
 	return(0);
 }
@@ -269,11 +265,7 @@ static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
 		return(0);
 	}
 
-	cracker_text(cj, new_pc);
-
-	LR = new_lr;
-
-	return(cracker_text_branch_link(cj, new_lr));
+	return(cracker_text_branch_and_link(cj, CC_AL, new_pc, new_lr));
 }
 
 static int thumb_inst_bxx_bl_blx(cracker_p cj)

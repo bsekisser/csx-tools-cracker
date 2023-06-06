@@ -31,7 +31,7 @@ static int __scrounge_text_xxx(cracker_p cj) {
 	while(cracker_step(cj))
 		;
 
-	return(1);
+	return(cj->symbol_count.added);
 }
 
 static int _scrounge_block__arm(cracker_p cj) {
@@ -69,16 +69,20 @@ static symbol_p _scrounge_block__strings(cracker_p cj, uint32_t start, uint32_t 
 	return(cjs);
 }
 
-static int _scrounge_block__thumb(cracker_p cj, uint16_t ir) {
+static int _scrounge_block__thumb(cracker_p cj) {
 	PC |= 1;
 
-	if(0xb500 == (ir & 0xff00)) { /* push ...,lr */
-			return(__scrounge_text_xxx(cj));
-	} else if(0xb400 == (ir & 0xfe00)) { /* push */
-			return(__scrounge_text_xxx(cj));
-	} else if(0x4800 == (ir & 0xf800)) { /* ldr rr, pc, $000 */
-			return(__scrounge_text_xxx(cj));
-	}
+	do {
+		if(0xb500 == (IR & 0xff00)) { /* push ...,lr */
+				return(__scrounge_text_xxx(cj));
+		} else if(0xb400 == (IR & 0xfe00)) { /* push */
+				return(__scrounge_text_xxx(cj));
+		} else if(0x4800 == (IR & 0xf800)) { /* ldr rr, pc, $000 */
+				return(__scrounge_text_xxx(cj));
+		}
+		
+		PC += sizeof(uint16_t);
+	}while(IR >>= 16);
 
 	return(0);
 }
@@ -87,30 +91,24 @@ static int _scrounge_block(cracker_p cj, uint32_t start, uint32_t end) {
 	const size_t byte_count = 1 + end - start;
 	LOG("start: 0x%08x, end: 0x%08x, byte_count = 0x%08zx", start, end, byte_count);
 
+	if(sizeof(uint16_t) > byte_count)
+		return(0);
+
 	if(!cracker_pat_bounded(cj, &start, &end))
 		return(0);
 
 	const uint32_t eend = end - sizeof(uint16_t);
 
-	for(PC = start & ~1; PC < eend; PC += sizeof(uint16_t)) {
-		const size_t size = (PC & 3) ? sizeof(uint16_t) : sizeof(uint32_t);
-		if(!cracker_read_if(cj, PC, size, &IR))
+	for(uint32_t xpc = start & ~1; xpc < eend; xpc += sizeof(uint32_t)) {
+		PC = xpc;
+
+		if(!cracker_read_if(cj, PC, sizeof(uint32_t), &IR))
 			break;
 
-		switch(PC & 3) {
-			case 0:
-				if(_scrounge_block__arm(cj))
-					return(1);
-				else if(_scrounge_block__thumb(cj, IR & 0xffff))
-					return(1);
-				else if(_scrounge_block__thumb(cj, (IR >> 16) & 0xffff))
-					return(1);
-				break;
-			case 2:
-				if(_scrounge_block__thumb(cj, IR & 0xffff))
-					return(1);
-				break;
-		}
+		if(_scrounge_block__arm(cj))
+			return(1);
+		else if(_scrounge_block__thumb(cj))
+			return(1);
 	}
 
 	return(0);
@@ -144,9 +142,9 @@ static void _scrounge_pass_strings(cracker_p cj) {
 	}while(rhs);
 }
 
-static void _scrounge_pass(cracker_p cj) {
+static symbol_p _scrounge_pass(cracker_p cj, symbol_p cjs) {
 	/* scrounge pass */
-	symbol_p rhs = cj->symbol_qhead;
+	symbol_p rhs = cjs ?: cj->symbol_qhead;
 	
 	do {
 		symbol_p lhs = rhs;
@@ -160,10 +158,13 @@ static void _scrounge_pass(cracker_p cj) {
 				const uint32_t rhs_pat = -1 + rhs->pat;
 				
 				if(_scrounge_block(cj, lhs_end_pat, rhs_pat))
-					return;
+;//				return(rhs);
 			}
 		}
 	}while(rhs);
+
+	LOG("symbol_count.added = 0x%08x", cj->symbol_count.added);
+	return(0);
 }
 
 static void load_content(cracker_content_p content, const char* file_name)
@@ -306,17 +307,19 @@ int main(void)
 			exit(-1);
 	}
 
+	symbol_p cjs = 0;
+
 	for(cj->symbol_pass = 1; cj->symbol_count.added; cj->symbol_pass++)
 //	for(cj->symbol_pass = 1; cj->symbol_pass <= 3; cj->symbol_pass++)
 	{
 		cracker_pass(cj, 0);
 		
 		if(1) if(0 == cj->symbol_count.added) {
-			_scrounge_pass(cj);
+			cjs = _scrounge_pass(cj, cjs);
 		}
 	}
 
-	_scrounge_pass_strings(cj);
+//	_scrounge_pass_strings(cj);
 
 	cj->collect_refs = 1;
 	cj->symbol_pass = 0;
