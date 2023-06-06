@@ -65,6 +65,9 @@ void cracker_reg_dst_wb(cracker_p cj, uint8_t rxd)
 {
 	vGPR_rRx(rxd) = vRx(rxd);
 	GPR_rRx(rxd)->_flags = rrCIRx(rxd)->_flags;
+
+	if((rPC == rxd) && vRx(rxd))
+		cracker_text(cj, vRx(rxd));
 }
 
 void cracker_reg_src(cracker_p cj, uint8_t rxs, uint8_t rrs, int load)

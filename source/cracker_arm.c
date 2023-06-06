@@ -199,12 +199,8 @@ static void arm_inst_dp(cracker_p cj)
 	}
 
 	if(CC_AL == ARM_IR_CC) {
-		if(alubox(&vR(D), ARM_DPI_OP, vR(N), vR(SOP))) {
+		if(alubox(&vR(D), ARM_DPI_OP, vR(N), vR(SOP)))
 			cracker_reg_dst_wb(cj, rrRD);
-
-			if(rR_IS_PC(D))
-				cracker_text(cj, vR(D));
-		}
 
 		if(0) if(rR_IS_PC(N)) {
 			_CORE_TRACE_("/* 0x%08x ??? 0x%08x --- 0x%08x ???ARM_ALU??? */",
@@ -635,19 +631,29 @@ static int arm_inst_smul_xy(cracker_p cj)
 	
 	// 0x01600080 --- cccc 0001 | 0110 dddd | zzzz ssss | 1yx0 mmmm
 
-	const unsigned bit_y = BEXT(IR, 6);
-	const unsigned bit_x = BEXT(IR, 5);
+	const unsigned bit_y = BMOV(IR, 6, 4);
+	const unsigned bit_x = BMOV(IR, 5, 4);
 
 	setup_rR_src(S, ARM_IR_RS);
 	setup_rR_src(M, ARM_IR_RM);
 	
 	setup_rR_dst(D, ARM_IR_RN); /* D -- !! RN !! */
+
+	int16_t vx = (vR(M) >> bit_x) & 0xffff;
+	int16_t vy = (vR(S) >> bit_y) & 0xffff;
+
+	vR(D) = (signed)(vx * vy);
+	cracker_reg_dst_wb(cj, rrRD);
 	
 	CORE_TRACE_START("SMUL%c%c(", bit_x ? 'T' : 'B', bit_y ? 'T' : 'B');
 	_CORE_TRACE_("%s", rR_NAME(D));
 	_CORE_TRACE_(", %s", rR_NAME(M));
 	_CORE_TRACE_(", %s", rR_NAME(S));
-	CORE_TRACE_END(")");
+	_CORE_TRACE_(")");
+
+	_CORE_TRACE_("; /* 0x%08x * 0x%08x = 0x%08x */", vx, vy, vR(D));
+
+	CORE_TRACE_END();
 
 	return(cracker_text_end_if(cj, ARM_IP_NEXT, (rR_IS_PC(D)) || (rR_IS_PC(N))));
 }
