@@ -104,6 +104,7 @@ typedef struct cracker_t {
 
 	symbol_p symbol;
 	uint symbol_pass;
+	unsigned symbol_text_mod;
 	symbol_p symbol_qhead;
 
 	struct {
@@ -141,6 +142,7 @@ void cracker_clear(cracker_p cj);
 void cracker_dump_hex(cracker_p cj, uint32_t start, uint32_t end);
 void cracker_pass(cracker_p cj, int trace);
 int cracker_pat_bounded(cracker_p cj, uint32_t* p2start, uint32_t* p2end);
+int cracker_pat_in_bounds(cracker_p cj, uint32_t pat, size_t size);
 int cracker_pat_out_of_bounds(cracker_p cj, uint32_t pat, size_t size);
 int cracker_pat_range_out_of_bounds(cracker_p cj, uint32_t start, uint32_t end);
 int cracker_pat_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src);
@@ -148,10 +150,12 @@ int cracker_pat_src_limit_if(cracker_p cj, uint32_t pat, uint8_t** src, uint8_t*
 uint32_t cracker_read(cracker_p cj, uint32_t pat, size_t size);
 int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data);
 int cracker_read_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src);
+void cracker_relocation(cracker_p cj, uint32_t pat);
 int cracker_step(cracker_p cj);
 symbol_p cracker_text(cracker_p cj, uint32_t pat);
 int cracker_text_branch(cracker_p cj, unsigned cc, uint32_t new_pc);
 int cracker_text_branch_and_link(cracker_p cj, unsigned cc, uint32_t new_pc, uint32_t new_lr);
+int cracker_text_branch_cc(cracker_p cj, unsigned cc, uint32_t new_pc, uint32_t next_pc);
 int cracker_text_branch_link(cracker_p cj, unsigned cc, uint32_t new_lr);
 symbol_p cracker_text_end(cracker_p cj, uint32_t pat);
 int cracker_text_end_if(cracker_p cj, uint32_t pat, int end);

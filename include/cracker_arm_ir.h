@@ -3,7 +3,7 @@
 #define ARM_DPI_OP mlBFEXT(IR, 24, 21)
 #define ARM_DPI_I BEXT(IR, 25)
 #define ARM_DPI_S BEXT(IR, 20)
-#define ARM_DPI_SOP mlBFEXT(IR, 6, 5)
+#define ARM_DPI_SOP (ARM_DPI_I ? SOP_ROR : mlBFEXT(IR, 6, 5))
 
 #define ARM_IR_CC mlBFEXT(IR, 31, 28)
 #define ARM_IR_RD mlBFEXT(IR, 15, 12)

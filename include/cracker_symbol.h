@@ -4,6 +4,7 @@
 
 enum {
 	SYMBOL_DATA,
+//	SYMBOL_RELOCATION,
 	SYMBOL_STRING,
 	SYMBOL_TEXT,
 	SYMBOL_TEXT_XXX,
@@ -30,3 +31,4 @@ symbol_p cracker_symbol_find(cracker_p cj, symbol_h h2lhs, uint32_t pat, uint32_
 int32_t cracker_symbol_intergap(cracker_p cj, symbol_p lhs, symbol_p rhs);
 void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh);
 int cracker_symbol_step(cracker_p cj, symbol_p cjs);
+int cracker_symbol_step_block(cracker_p cj, symbol_p cjs);

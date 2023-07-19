@@ -54,7 +54,7 @@ static inline unsigned alubox(uint32_t* rd, uint8_t op, uint32_t s1, uint32_t s2
 		result = s1 * s2;
 		break;
 	case ARM_MVN:
-		result = -s2;
+		result = ~s2;
 		break;
 	case ARM_ORR:
 		result = s1 | s2;

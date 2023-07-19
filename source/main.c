@@ -11,6 +11,7 @@
 #include "bitfield.h"
 #include "err_test.h"
 #include "log.h"
+#include "unused.h"
 
 /* **** */
 
@@ -34,7 +35,7 @@ static int __scrounge_text_xxx(cracker_p cj) {
 	return(cj->symbol_count.added);
 }
 
-static int _scrounge_block__arm(cracker_p cj) {
+static int _scrounge_block__arm(cracker_p cj, int safe) {
 	if(0 != (PC & 3))
 		return(0);
 
@@ -49,7 +50,13 @@ static int _scrounge_block__arm(cracker_p cj) {
 			return(__scrounge_text_xxx(cj));
 	}
 
+	if(!safe) switch(IR & 0xff000000) {
+		case 0xe5000000: /* ldr rd, rt, #000 */
+			return(__scrounge_text_xxx(cj));
+	}
+
 	return(0);
+	UNUSED(safe);
 }
 
 static symbol_p _scrounge_block__strings(cracker_p cj, uint32_t start, uint32_t end) {
@@ -69,16 +76,24 @@ static symbol_p _scrounge_block__strings(cracker_p cj, uint32_t start, uint32_t 
 	return(cjs);
 }
 
-static int _scrounge_block__thumb(cracker_p cj) {
+static int _scrounge_block__thumb(cracker_p cj, int safe) {
 	PC |= 1;
 
-	do {
+	if(!safe && (0xf000f800 == (0xf000f800 & IR)))
+		cracker_relocation(cj, PC);
+	else do {
 		if(0xb500 == (IR & 0xff00)) { /* push ...,lr */
 				return(__scrounge_text_xxx(cj));
 		} else if(0xb400 == (IR & 0xfe00)) { /* push */
+				if(!safe)
+					return(__scrounge_text_xxx(cj));
+		} else switch(IR & 0xf800) {
+			case 0x4800: /* ldr rr, pc, $000 */
 				return(__scrounge_text_xxx(cj));
-		} else if(0x4800 == (IR & 0xf800)) { /* ldr rr, pc, $000 */
-				return(__scrounge_text_xxx(cj));
+			case 0xf000: /* b 7ff */
+				if(!safe)
+					return(__scrounge_text_xxx(cj));
+				break;
 		}
 		
 		PC += sizeof(uint16_t);
@@ -87,7 +102,7 @@ static int _scrounge_block__thumb(cracker_p cj) {
 	return(0);
 }
 
-static int _scrounge_block(cracker_p cj, uint32_t start, uint32_t end) {
+static int _scrounge_block(cracker_p cj, uint32_t start, uint32_t end, int safe) {
 	const size_t byte_count = 1 + end - start;
 	LOG("start: 0x%08x, end: 0x%08x, byte_count = 0x%08zx", start, end, byte_count);
 
@@ -102,13 +117,16 @@ static int _scrounge_block(cracker_p cj, uint32_t start, uint32_t end) {
 	for(uint32_t xpc = start & ~1; xpc < eend; xpc += sizeof(uint32_t)) {
 		PC = xpc;
 
+		if(xpc & 3)
+			xpc &= ~3;
+
 		if(!cracker_read_if(cj, PC, sizeof(uint32_t), &IR))
 			break;
 
-		if(_scrounge_block__arm(cj))
-			return(1);
-		else if(_scrounge_block__thumb(cj))
-			return(1);
+		if(_scrounge_block__arm(cj, safe))
+			continue;
+		else if(_scrounge_block__thumb(cj, safe))
+			continue;
 	}
 
 	return(0);
@@ -142,7 +160,7 @@ static void _scrounge_pass_strings(cracker_p cj) {
 	}while(rhs);
 }
 
-static symbol_p _scrounge_pass(cracker_p cj, symbol_p cjs) {
+static symbol_p _scrounge_pass(cracker_p cj, symbol_p cjs, int safe) {
 	/* scrounge pass */
 	symbol_p rhs = cjs ?: cj->symbol_qhead;
 	
@@ -157,8 +175,8 @@ static symbol_p _scrounge_pass(cracker_p cj, symbol_p cjs) {
 				const uint32_t lhs_end_pat = 1 + lhs->end_pat;
 				const uint32_t rhs_pat = -1 + rhs->pat;
 				
-				if(_scrounge_block(cj, lhs_end_pat, rhs_pat))
-;//				return(rhs);
+				if(_scrounge_block(cj, lhs_end_pat, rhs_pat, safe))
+					continue;
 			}
 		}
 	}while(rhs);
@@ -275,18 +293,19 @@ int main(void)
 	
 	uint32_t src = cj->content.end;
 	do {
-		if(0xffffa55a == cracker_read(cj, src, sizeof(uint32_t)))
-			cracker_data(cj, src, sizeof(uint32_t), 0);
-		else {
-			uint32_t word = cracker_read(cj, src, sizeof(uint16_t));
-			
-			switch(word) {
-//				case 0x55aa: /* fat marker */
-				case 0x5aa5:
-				case 0xa55a:
-					cracker_data(cj, src, sizeof(uint16_t), 0);
-					break;
-			}
+		IR = cracker_read(cj, src, sizeof(uint32_t));
+		switch(IR) {
+			case 0xffffa55a:
+				cracker_data(cj, src, sizeof(uint32_t), 0);
+				break;
+			default:
+				switch(IR & 0xffff) {
+					case 0x5aa5:
+					case 0xa55a:
+						cracker_data(cj, src, sizeof(uint16_t), 0);
+						break;
+				}
+				break;
 		}
 
 		src--;
@@ -307,6 +326,7 @@ int main(void)
 			exit(-1);
 	}
 
+	int safe = 1;
 	symbol_p cjs = 0;
 
 	for(cj->symbol_pass = 1; cj->symbol_count.added; cj->symbol_pass++)
@@ -314,12 +334,14 @@ int main(void)
 	{
 		cracker_pass(cj, 0);
 		
-		if(1) if(0 == cj->symbol_count.added) {
-			cjs = _scrounge_pass(cj, cjs);
-		}
+		if(0 == cj->symbol_count.added) {
+			cjs = _scrounge_pass(cj, cjs, safe);
+			safe = 0;
+		} else
+			cjs = 0;
 	}
 
-//	_scrounge_pass_strings(cj);
+	_scrounge_pass_strings(cj);
 
 	cj->collect_refs = 1;
 	cj->symbol_pass = 0;

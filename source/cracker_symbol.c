@@ -105,13 +105,8 @@ static void cracker_symbol__log_text(cracker_p cj, symbol_p cjs)
 	LOG_END(", TEXT ENTRY%s", BEXT(cjs->type, SYMBOL_TEXT_XXX) ? " XXX" : "");
 
 	if(cjs->in_bounds) {
-		PC = cjs->pat;
-		while(PC <= cjs->end_pat) {
-			if(!cracker_symbol_step(cj, cjs)) {
-				cracker_clear(cj);
-				break;
-			}
-		}
+		if(cracker_symbol_step_block(cj, cjs))
+			cracker_clear(cj);
 
 		printf("\n");
 	}
@@ -124,9 +119,6 @@ static void cracker_symbol__log_text(cracker_p cj, symbol_p cjs)
 void cracker_symbol_end(symbol_p cjs, uint32_t pat, const char* name)
 {
 	if(0 == cjs)
-		return;
-
-	if(0 == cjs->in_bounds)
 		return;
 
 	const uint32_t pat_mask = (~3 >> cjs->thumb);
@@ -231,10 +223,18 @@ void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
 
 int cracker_symbol_step(cracker_p cj, symbol_p cjs)
 {
-	IP = PC;
-
 	if(cjs->thumb)
 		return(thumb_step(cj));
 
 	return(arm_step(cj));
+}
+
+int cracker_symbol_step_block(cracker_p cj, symbol_p cjs)
+{
+	PC = cjs->pat;
+	while(PC <= cjs->end_pat)
+		if(0 == cracker_symbol_step(cj, cjs))
+			return(-1);
+
+	return(0);
 }

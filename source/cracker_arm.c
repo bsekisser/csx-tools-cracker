@@ -54,7 +54,10 @@ static void _shifter_operand(cracker_p cj)
 			vR(SOP) = _lsr(vR(M), vR(S));
 			break;
 		case SOP_ROR:
-			vR(SOP) = _ror(vR(M), vR(S));
+			if(!ARM_DPI_I && !BEXT(IR, 4) && (0 == vR(S)))
+				vR(SOP) = _rrx_v(vR(M), 0);
+			else
+				vR(SOP) = _ror(vR(M), vR(S));
 			break;
 	}
 }
@@ -78,13 +81,16 @@ static int arm_inst_b_bl(cracker_p cj)
 		link ? "L" : "", blx ? "X" : "", new_pc & (~3 >> blx),
 		blx ? 'T' : 'A', splat ? "x" : "", offset);
 
+	if(splat)
+		cracker_relocation(cj, IP);
+
 	if(link) {
 		unsigned bcc = blx ? CC_AL : ARM_IR_CC;
 
 		return(cracker_text_branch_and_link(cj, bcc, new_pc, ARM_IP_NEXT));
 	}
 
-	return(cracker_text_branch(cj, ARM_IR_CC, new_pc));
+	return(cracker_text_branch_cc(cj, ARM_IR_CC, new_pc, ARM_IP_NEXT));
 }
 
 static int arm_inst_bx(cracker_p cj)
@@ -118,10 +124,14 @@ static int arm_inst_bx(cracker_p cj)
 	return(0);
 }
 
+#define mcrc(_cp, _op1, _cn, _cm, _op2) \
+	(((_cp) & 15) << 8) | (((_op1) & 7) << 21) \
+	| (((_cn) & 15) << 16) | ((_cm) & 15) | (((_op2) & 7) << 5)
+
 static int arm_inst_cdp_mcr_mrc(cracker_p cj)
 {
-	int is_cdp = (0 == BEXT(IR, 4));
-	int is_mrc = BEXT(IR, 20);
+	const unsigned is_cdp = (0 == BEXT(IR, 4));
+	const unsigned is_mrc = BEXT(IR, 20);
 
 	if(is_cdp || is_mrc) {
 		setup_rR_dst(D, ARM_IR_RD);
@@ -131,18 +141,52 @@ static int arm_inst_cdp_mcr_mrc(cracker_p cj)
 
 	CORE_TRACE_START();
 
+	const unsigned cp = mlBFEXT(IR, 11, 8);
+	const unsigned op[2] = { mlBFEXT(IR, 23, 21), mlBFEXT(IR, 7, 5) };
+	setup_rR_vR(N, mlBFEXT(IR, 19, 16), 0);
+	setup_rR_vR(M, mlBFEXT(IR, 3, 0), 0);
+
 	_CORE_TRACE_("%s(CP%u, %u, %s, CRn(%u), CRm(%u)",
 		(is_cdp ? "CDP" : (is_mrc ? "MRC" : "MCR")),
-		mlBFEXT(IR, 11, 8), mlBFEXT(IR, 23, 21), rR_NAME(D),
-		mlBFEXT(IR, 19, 16), mlBFEXT(IR, 3, 0));
+		cp, op[0], rR_NAME(D), rR(N), rR(M));
 
-	uint op2 = mlBFEXT(IR, 7, 5);
-
-	if(op2) {
-		_CORE_TRACE_(", %u)", op2);
+	if(op[1]) {
+		_CORE_TRACE_(", %u)", op[1]);
 	}
 
-	CORE_TRACE_END();
+	const char* ss = "";
+
+	switch(mcrc(cp, op[0], rR(N), rR(M), op[1])) {
+		case mcrc(15, 0, 1, 0, 0):
+			ss = "Control Register";
+			break;
+		case mcrc(15, 0, 2, 0, 0):
+			ss = "Translation Table Base Register 0";
+			break;
+		case mcrc(15, 0, 5, 0, 0):
+			ss = "Data Fault Status Register";
+			break;
+		case mcrc(15, 0, 5, 0, 1):
+			ss = "Instruction Fault Status Register";
+			break;
+		case mcrc(15, 0, 7, 0, 4):
+			ss = "Wait For Interrupt";
+			break;
+		case mcrc(15, 0, 7, 7, 0):
+			ss = "Invalidate ICache and DCache";
+			break;
+		case mcrc(15, 0, 7, 10, 4):
+			ss = "Drain Write Buffer";
+			break;
+		case mcrc(15, 0, 8, 7, 0):
+			ss = "Invalidate TLB";
+			break;
+		default:
+			LOG_ACTION(exit(-1));
+			break;
+	}
+
+	CORE_TRACE_END("; /* %s */", ss);
 
 	return(cracker_text_end_if(cj, ARM_IP_NEXT, rR_IS_PC(D)));
 }
@@ -206,25 +250,47 @@ static void arm_inst_dp(cracker_p cj)
 	}
 }
 
-static int arm_inst_dp_immediate(cracker_p cj)
+static void arm_inst_dp__final(cracker_p cj)
 {
-	const uint shift = mlBFMOV(IR, 11, 8, 1);
-	const uint imm8 = mlBFEXT(IR, 7, 0);
+	const char* dpi_ss[16] = {
+		"& ", "^ ", "- ", "- ", "+ ", "+ ", "- ", "- ",
+		"& ", "^ ", "- ", "+ ", "| ", "XX", "& ~", "XX",
+	};
 
-	setup_rR_vR(SOP, ~0, _ror(imm8, shift));
-
-	arm_inst_dp(cj);
-
-	if(shift) {
-		_CORE_TRACE_("ROR(%u, %u)); /* 0x%08x */", imm8, shift, vR(SOP));
-	} else {
-		_CORE_TRACE_("%u)", vR(SOP));
-		if(rPC == rR(D)) {
+	switch(ARM_DPI_OP) {
+		case ARM_MOV:
+		case ARM_MVN:
 			_CORE_TRACE_("; /* 0x%08x */", vR(D));
-		}
+			break;
+		default:
+			_CORE_TRACE_("; /* 0x%08x %s0x%08x == 0x%08x */",
+				vR(N), dpi_ss[ARM_DPI_OP], vR(SOP), vR(D));
+			break;
 	}
 
 	CORE_TRACE_END();
+}
+
+static int arm_inst_dp_immediate(cracker_p cj)
+{
+	setup_rR_vR(S, ~0, mlBFMOV(IR, 11, 8, 1));
+	setup_rR_vR(M, ~0, mlBFEXT(IR, 7, 0));
+
+	setup_rR_vR(SOP, ~0, _ror(vR(M), vR(S)));
+
+	arm_inst_dp(cj);
+
+	if(vR(S)) {
+		_CORE_TRACE_("ROR(%u, %u))", vR(M), vR(S));
+//		_CORE_TRACE_("ROR(%u, %u)); /* 0x%08x */", vR(M), vR(S), vR(SOP));
+	} else {
+		_CORE_TRACE_("%u)", vR(SOP));
+//		if(rPC == rR(D)) {
+//			_CORE_TRACE_("; /* 0x%08x */", vR(D));
+//		}
+	}
+
+	arm_inst_dp__final(cj);
 
 	return(cracker_text_end_if(cj, ARM_IP_NEXT, rR_IS_PC(D)));
 }
@@ -246,16 +312,18 @@ static int arm_inst_dp_immediate_shift(cracker_p cj) {
 	arm_inst_dp(cj);
 
 	if(vR(S)) {
-		CORE_TRACE_END("%s(%s, 0x%02x))",
+		_CORE_TRACE_("%s(%s, 0x%02x))",
 			shift_op_string[ARM_DPI_SOP],
 			rR_NAME(M), vR(S));
 	} else {
 		if(SOP_ROR == ARM_DPI_SOP) {
-			CORE_TRACE_END("RRX(%s))", rR_NAME(M));
+			_CORE_TRACE_("RRX(%s))", rR_NAME(M));
 		} else {
-			CORE_TRACE_END("%s)", rR_NAME(M));
+			_CORE_TRACE_("%s)", rR_NAME(M));
 		}
 	}
+
+	arm_inst_dp__final(cj);
 
 	return(cracker_text_end_if(cj, ARM_IP_NEXT, rR_IS_PC(D)));
 }
@@ -269,9 +337,11 @@ static int arm_inst_dp_register_shift(cracker_p cj)
 
 	arm_inst_dp(cj);
 
-	CORE_TRACE_END("%s(%s, %s))",
+	CORE_TRACE("%s(%s, %s))",
 		shift_op_string[ARM_DPI_SOP],
 		rR_NAME(M), rR_NAME(S));
+
+	arm_inst_dp__final(cj);
 
 	return(cracker_text_end_if(cj, ARM_IP_NEXT, rR_IS_PC(D)));
 }
@@ -408,7 +478,7 @@ static int arm_inst_ldst_scaled_register_offset(cracker_p cj)
 	if(0 == mlBFEXT(IR, 11, 4)) {
 		_CORE_TRACE_(", %s%s", ARM_IR_LDST_BIT(u23) ? "+" : "-", rR_NAME(M));
 	} else {
-		uint shift = ARM_IR_6_5;
+		unsigned shift = ARM_IR_6_5;
 
 		switch(rR(S)) {
 			case SOP_ASR:
@@ -510,7 +580,7 @@ static int arm_inst_ldstm(cracker_p cj)
 
 	CORE_TRACE_END("{%s}%s)", reglist, ARM_IR_LDSTM_BIT(s22) ? ".S" : "");
 
-	const int ldpc = ARM_IR_LDST_BIT(l20) && BEXT(IR, PC);
+	const int ldpc = ARM_IR_LDST_BIT(l20) && BEXT(IR, rPC);
 	return(cracker_text_end_if(cj, ARM_IP_NEXT, ldpc && (CC_AL == ARM_IR_CC)));
 }
 
@@ -578,15 +648,18 @@ static int arm_inst_msr(cracker_p cj)
 			bit_r ? 'S' : 'C',
 			psr_fields);
 
-		uint imm8 = mlBFEXT(IR, 7, 0);
-		uint shift = mlBFEXT(IR, 11, 8) << 1;
+		setup_rR_vR(M, ~0, mlBFEXT(IR, 7, 0));
+		setup_rR_vR(S, ~0, mlBFMOV(IR, 11, 8, 1));
 
-		if(shift) {
-			_CORE_TRACE_("ROR(%02u, %03u)", shift, imm8);
+		_shifter_operand(cj);
+
+		if(vR(S)) {
+			_CORE_TRACE_("ROR(%03u, %02u)", vR(M), vR(S));
 		} else {
-			_CORE_TRACE_("%03u", imm8);
+			_CORE_TRACE_("RRX(%03u)", vR(M));
 		}
 
+		_CORE_TRACE_("; /* 0x%08x */", vR(SOP));
 	} else {
 		setup_rR_src(M, ARM_IR_RM);
 

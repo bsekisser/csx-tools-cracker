@@ -216,8 +216,7 @@ static int thumb_inst_bcc(cracker_p cj)
 
 	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x */", new_pc & ~1, THUMB_PC, imm8);
 
-	cracker_text(cj, THUMB1_IP_NEXT);
-	return(cracker_text_branch(cj, CCv, new_pc));
+	return(cracker_text_branch_cc(cj, CCv, new_pc, THUMB1_IP_NEXT));
 }
 
 static int thumb_inst_bx_blx(cracker_p cj)
@@ -257,6 +256,9 @@ static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
 	int splat = (new_pc == new_lr);
 	CORE_TRACE("BL%s(0x%08x); /* 0x%08x + %s0x%08x, LR = 0x%08x */",
 		blx ? "X" : "", new_pc & ~1, PC, splat ? "x" : "", eao, new_lr & ~1);
+
+	if(splat)
+		cracker_relocation(cj, IP);
 
 	if(0) LOG("LR = 0x%08x, PC = 0x%08x", new_lr, new_pc);
 
@@ -335,11 +337,11 @@ static int thumb_inst_dpr_rms_rdn(cracker_p cj)
 	
 	switch(operation) {
 		default:
-			_CORE_TRACE_("/* 0x%08x %s 0x%08x = 0x%08x */",
+			_CORE_TRACE_("; /* 0x%08x %s 0x%08x = 0x%08x */",
 				vR(N), dpr_opcs, vR(M), vR(D));
 			break;
 		case ARM_BIC:
-			_CORE_TRACE_("/* 0x%08x %s ~0x%08x = 0x%08x */",
+			_CORE_TRACE_("; /* 0x%08x %s ~0x%08x = 0x%08x */",
 				vR(N), dpr_opcs, vR(M), vR(D));
 			break;
 	}
@@ -674,7 +676,7 @@ static int thumb_inst_shift_i(cracker_p cj)
 
 	cracker_reg_dst_wb(cj, rrRD);
 
-	CORE_TRACE_START("%s(%s, %s, 0x%02x)",
+	CORE_TRACE_START("%s(%s, %s, %01u)",
 		shift_op_string[sop], rR_NAME(D),
 		rR_NAME(M), vR(S));
 
