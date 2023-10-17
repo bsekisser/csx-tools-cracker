@@ -66,6 +66,9 @@ static inline unsigned alubox(uint32_t* rd, uint8_t op, uint32_t s1, uint32_t s2
 	case ARM_ROR:
 		result = _ror(s1, s2);
 		break;
+	case THUMB_NEG:
+		result = 0 - s2;
+		break;
 	default:
 		LOG("op = 0x%02x", op);
 		LOG_ACTION(exit(-1));

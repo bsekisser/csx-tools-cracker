@@ -312,30 +312,44 @@ static int thumb_inst_dpr_rms_rdn(cracker_p cj)
 
 	const char* _dpr_ops[16] = {
 		"AND", "EOR", "LSL", "LSR", "ASR", "ADC", "SBC", "ROR",
-		"TST", "RSB", "CMP", "CMN", "ORR", "MUL", "BIC", "MVN" };
+		"TST", "NEG", "CMP", "CMN", "ORR", "MUL", "BIC", "MVN" };
 	const char* dpr_ops = _dpr_ops[operation];
 
 	const unsigned _aluop[16] = {
 		ARM_AND, ARM_EOR, ARM_LSL, ARM_LSR, ARM_ASR, ARM_ADC, ARM_SBC, ARM_ROR,
-		ARM_TST, ARM_RSB, ARM_CMP, ARM_CMN, ARM_ORR, ARM_MUL, ARM_BIC, ARM_MVN };
+		ARM_TST, THUMB_NEG, ARM_CMP, ARM_CMN, ARM_ORR, ARM_MUL, ARM_BIC, ARM_MVN };
 	const unsigned aluop = _aluop[operation];
 
 	setup_rR_vR_src(M, mlBFEXT(IR, 5, 3));
-	setup_rR_vR_src(N, mlBFEXT(IR, 2, 0));
 
-	setup_rR_dst_rR_src(D, rR(N), N);
-	
+	switch(aluop) {
+		case ARM_MVN:
+		case THUMB_NEG:
+			setup_rR_dst(D, mlBFEXT(IR, 2, 0));
+			vR(N) = 0;
+		break;
+		default:
+			setup_rR_vR_src(N, mlBFEXT(IR, 2, 0));
+			setup_rR_dst_rR_src(D, rR(N), N);
+		break;
+	}
+
 	if(alubox(&vR(D), aluop, vR(N), vR(M)))
 		cracker_reg_dst_wb(cj, rrRD);
 
 	CORE_TRACE_START("%s(%s, %s)", dpr_ops, rR_NAME(D), rR_NAME(M));
-	
+
 	const char* _dpr_opcs[16] = {
 		"&", "^", "<<", ">>", ">>>", "+", "-", ">><<",
-		"&", "-",  "-",  "-",   "|", "*", "&", "-" };
+		"&", "-",  "-",  "-",   "|", "*", "&", "~" };
 	const char* dpr_opcs = _dpr_opcs[operation];
 	
-	switch(operation) {
+	switch(aluop) {
+		case ARM_MVN:
+		case THUMB_NEG:
+			_CORE_TRACE_("; /* %s0x%08x = 0x%08x */",
+				dpr_opcs, vR(M), vR(D));
+			break;
 		default:
 			_CORE_TRACE_("; /* 0x%08x %s 0x%08x = 0x%08x */",
 				vR(N), dpr_opcs, vR(M), vR(D));
@@ -345,7 +359,7 @@ static int thumb_inst_dpr_rms_rdn(cracker_p cj)
 				vR(N), dpr_opcs, vR(M), vR(D));
 			break;
 	}
-			
+
 	CORE_TRACE_END();
 	return(1);
 }

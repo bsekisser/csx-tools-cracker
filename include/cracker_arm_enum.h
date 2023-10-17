@@ -9,4 +9,6 @@ enum {
 	ARM_ASR, ARM_LSL, ARM_LSR, ARM_ROR,
 //
 	ARM_MUL,
+//
+	THUMB_NEG,
 };
