@@ -151,8 +151,10 @@ static int arm_inst_cdp_mcr_mrc(cracker_p cj)
 		cp, op[0], rR_NAME(D), rR(N), rR(M));
 
 	if(op[1]) {
-		_CORE_TRACE_(", %u)", op[1]);
+		_CORE_TRACE_(", %u", op[1]);
 	}
+
+	_CORE_TRACE_(")");
 
 	const char* ss = "";
 

@@ -171,7 +171,7 @@ static int thumb_inst_ascm_i(cracker_p cj)
 		cracker_reg_dst_wb(cj, rrRD);
 
 	CORE_TRACE_START("%s(%s, 0x%02x)",
-		opname[op], reg_name[rR(D)], imm8);
+		opname[op], reg_name[rR(N)], imm8);
 
 	const char opc[4] = { '=', '-', '+', '-' };
 
@@ -201,7 +201,7 @@ static int thumb_inst_b(cracker_p cj)
 	const int32_t eao = mlBFMOVs(IR, 10, 0, 1);
 	const uint32_t new_pc = THUMB1_PC + eao;
 
-	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x*/", new_pc & ~1, THUMB_PC, eao);
+	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x */", new_pc & ~1, THUMB_PC, eao);
 
 	return(cracker_text_branch(cj, CC_AL, new_pc));
 }
@@ -512,11 +512,11 @@ static int thumb_inst_ldst_rd_i(cracker_p cj)
 	} else
 		setup_rR_src(D, mlBFEXT(IR, 10, 8));
 
-	CORE_TRACE_START("%sR(%s, %s, 0x%04x", bit_l ? "LD" : "ST",
+	CORE_TRACE_START("%sR(%s, %s, 0x%04x)", bit_l ? "LD" : "ST",
 		reg_name[rR(D)], rR_NAME(N), offset);
 
 	if(is_valid_read) {
-		_CORE_TRACE_("); /* [0x%08x]:0x%08x */", ea, vR(D));
+		_CORE_TRACE_("; /* [0x%08x]:0x%08x */", ea, vR(D));
 	}
 
 	CORE_TRACE_END();
