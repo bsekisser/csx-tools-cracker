@@ -78,7 +78,7 @@ static int arm_inst_b_bl(cracker_p cj)
 
 	int splat = (new_pc == ARM_IP_NEXT);
 	CORE_TRACE("B%s%s(0x%08x) /* %c(%s0x%08x) */",
-		link ? "L" : "", blx ? "X" : "", new_pc & (~3 >> blx),
+		link ? "L" : "", blx ? "X" : "", new_pc & ~(3 >> blx),
 		blx ? 'T' : 'A', splat ? "x" : "", offset);
 
 	if(splat)

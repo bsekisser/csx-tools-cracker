@@ -83,7 +83,7 @@ static void cracker_symbol__log_string(cracker_p cj, symbol_p cjs) {
 
 static void cracker_symbol__log_text(cracker_p cj, symbol_p cjs)
 {
-	const uint32_t pat_mask = ~3 >> cjs->thumb;
+	const uint32_t pat_mask = ~(3 >> cjs->thumb);
 
 	LOG_START("0x%08x", cjs->pat & pat_mask);
 
@@ -121,7 +121,7 @@ void cracker_symbol_end(symbol_p cjs, uint32_t pat, const char* name)
 	if(0 == cjs)
 		return;
 
-	const uint32_t pat_mask = (~3 >> cjs->thumb);
+	const uint32_t pat_mask = ~(3 >> cjs->thumb);
 	const uint32_t pat_masked = pat & pat_mask;
 
 	if(pat_masked < (cjs->pat & pat_mask))
@@ -165,11 +165,11 @@ int32_t cracker_symbol_intergap(cracker_p cj, symbol_p lhs, symbol_p rhs)
 	const uint32_t pat_bump = 3 >> lhs->thumb;
 	const uint32_t pat_mask = ~pat_bump;
 
-//	const uint32_t lhs_end_pat = lhs->end_pat & (~3 >> lhs->thumb);
+//	const uint32_t lhs_end_pat = lhs->end_pat & ~(3 >> lhs->thumb);
 	const uint32_t lhs_end_pat = lhs->end_pat;
 	const uint32_t lhs_end_pat_bumped = (lhs_end_pat + pat_bump) & pat_mask;
 
-	const uint32_t rhs_pat = rhs->pat & (~3 >> rhs->thumb);
+	const uint32_t rhs_pat = rhs->pat & ~(3 >> rhs->thumb);
 
 	const int32_t byte_count = rhs_pat - lhs_end_pat_bumped;
 
@@ -211,7 +211,7 @@ void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh)
 		if(cjs) {
 			const size_t byte_count = cracker_symbol_intergap(cj, lhs, cjs);
 			if(byte_count) {
-				const uint32_t cjs_pat = cjs->pat & (~3 >> cjs->thumb);
+				const uint32_t cjs_pat = cjs->pat & ~(3 >> cjs->thumb);
 
 				LOG("0x%08x -- 0x%08x === 0x%08x", lhs->end_pat, cjs_pat, byte_count);
 				cracker_dump_hex(cj, 1 + lhs->end_pat, -1 + cjs_pat);

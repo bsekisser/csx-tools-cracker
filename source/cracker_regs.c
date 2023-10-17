@@ -38,7 +38,7 @@ static void _setup_rRx_vRx_src(cracker_p cj, uint8_t rxs, uint8_t rrs)
 
 	if(rPC == rrs) {
 		vRx(rxs) += 4 >> IS_THUMB;
-		vRx(rxs) &= ~3U >> IS_THUMB;
+		vRx(rxs) &= ~(3 >> IS_THUMB);
 	}
 }
 
