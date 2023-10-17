@@ -154,10 +154,10 @@ static int thumb_inst_ascm_i(cracker_p cj)
 	 * 0x3800 -- SUBS -- 0011 1ddd iiii iiii
 	 */
 
-	const uint imm8 = mlBFEXT(IR, 7, 0);
-	const uint op = mlBFEXT(IR, 12, 11);
+	const unsigned imm8 = mlBFEXT(IR, 7, 0);
+	const unsigned op = mlBFEXT(IR, 12, 11);
 	const char* opname[4] = { "MOVS", "CMPS", "ADDS", "SUBS" };
-	const uint aluop[4] = { ARM_MOV, ARM_CMP, ARM_ADD, ARM_SUB };
+	const unsigned aluop[4] = { ARM_MOV, ARM_CMP, ARM_ADD, ARM_SUB };
 
 	if(0 == op)
 		setup_rR_dst(N, mlBFEXT(IR, 10, 8));
@@ -308,7 +308,7 @@ return_not_prefix_suffix:
 
 static int thumb_inst_dpr_rms_rdn(cracker_p cj)
 {
-	const uint operation = mlBFEXT(IR, 9, 6);
+	const unsigned operation = mlBFEXT(IR, 9, 6);
 
 	const char* _dpr_ops[16] = {
 		"AND", "EOR", "LSL", "LSR", "ASR", "ADC", "SBC", "ROR",
@@ -498,7 +498,7 @@ static int thumb_inst_ldst_rd_i(cracker_p cj)
 			break;
 	}
 
-	const uint ea = vR(N) + offset;
+	const unsigned ea = vR(N) + offset;
 	int is_valid_read = 0;
 
 	if(bit_l) {
@@ -606,7 +606,7 @@ static int thumb_inst_sdp_rms_rdn(cracker_p cj)
 		if(0) LOG("%s -- 0x%08x", rR_NAME(N), vR(N));
 	}
 
-	const uint aluop[4] = { ARM_ADD, ARM_CMP, ARM_MOV, -1 };
+	const unsigned aluop[4] = { ARM_ADD, ARM_CMP, ARM_MOV, -1 };
 	if(alubox(&vR(D), aluop[operation], vR(N), vR(M)))
 		cracker_reg_dst_wb(cj, rrRD);
 
@@ -641,7 +641,7 @@ static int thumb_inst_shift_i(cracker_p cj)
 	 * 0x1800 -- XXX -- 0001 1xxx xxxx xxxx -- add_sub_rn_rd
 	 */
 
-	const uint sop = mlBFEXT(IR, 12, 11);
+	const unsigned sop = mlBFEXT(IR, 12, 11);
 
 	setup_rR_vR(S, ~0, mlBFEXT(IR, 10, 6));
 	setup_rR_vR_src(M, mlBFEXT(IR, 5, 3));

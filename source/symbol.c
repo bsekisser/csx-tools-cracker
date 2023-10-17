@@ -55,7 +55,7 @@ symbol_p symbol_find_pat(symbol_h h2sqh, symbol_h h2lhs, uint32_t pat, uint32_t 
 	return(0);
 }
 
-symbol_p symbol_new(uint32_t pat, size_t size, uint type)
+symbol_p symbol_new(uint32_t pat, size_t size, unsigned type)
 {
 	const symbol_p cjs = calloc(1, sizeof(symbol_t));
 	

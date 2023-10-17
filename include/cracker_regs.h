@@ -16,9 +16,9 @@ typedef struct cracker_reg_t {
 	uint32_t v;
 
 	union {
-		uint _flags;
+		unsigned _flags;
 		struct {
-			uint is_pc_ref:1;
+			unsigned is_pc_ref:1;
 		};
 	};
 }cracker_reg_t;

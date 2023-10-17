@@ -229,7 +229,7 @@ int main(void)
 	cracker_text(cj, cj->content.base);
 
 	if(0) if(loader) { // loader
-		uint string_table[] = {
+		unsigned string_table[] = {
 			0x00000920, 0x0000418c, 0x0000419c, 0x000041a4,
 			0x00004254, 0x00004570, 0x000046af, 0x000046c8,
 			0x000048fc, 0x000050ac, 0x00006190, 0x00006c54,
@@ -287,7 +287,7 @@ int main(void)
 			0,
 		};
 		
-		for(uint i = 0; string_table[i]; i++)
+		for(unsigned i = 0; string_table[i]; i++)
 			cracker_data_string_rel(cj, string_table[i]);
 	}
 	

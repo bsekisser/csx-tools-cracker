@@ -29,7 +29,7 @@ UNUSED_FN static void __cracker_disasm(cracker_p cj, uint32_t address, uint32_t 
 	size_t count = cs_disasm(handle, insn_data, size, insn_addr, 0, &insn);
 
 	if (count > 0) {
-		for(uint j = 0; j < count; j++) {
+		for(unsigned j = 0; j < count; j++) {
 			const cs_insn* insn_j = &insn[j];
 
 			const uint64_t insn_address = insn_j->address;

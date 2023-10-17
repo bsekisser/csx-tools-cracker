@@ -130,7 +130,7 @@ void cracker_pass(cracker_p cj, int trace)
 	cj->core.trace = !!trace;
 	cj->symbol_count.added = 0;
 
-	uint pass_symbol_count = 0;
+	unsigned pass_symbol_count = 0;
 
 	symbol_p cjs = cj->symbol_qhead;
 
@@ -140,7 +140,7 @@ void cracker_pass(cracker_p cj, int trace)
 		pass_symbol_count++;
 	}
 
-	const uint symbol_count = 
+	const unsigned symbol_count = 
 		cj->symbol_count.data
 		+ cj->symbol_count.string
 		+ cj->symbol_count.text;

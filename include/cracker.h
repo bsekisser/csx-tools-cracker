@@ -78,9 +78,9 @@ typedef struct cracker_core_t {
 #define vGPR_rRx(_x) GPR_rRx(_x)->v
 
 	union {
-		uint _flags;
+		unsigned _flags;
 		struct {
-			uint trace:1;
+			unsigned trace:1;
 		};
 	};
 }cracker_core_t;
@@ -103,22 +103,22 @@ typedef struct cracker_t {
 	cracker_content_t content;
 
 	symbol_p symbol;
-	uint symbol_pass;
+	unsigned symbol_pass;
 	unsigned symbol_text_mod;
 	symbol_p symbol_qhead;
 
 	struct {
-			uint added;
-			uint data;
-			uint string;
-			uint text;
+			unsigned added;
+			unsigned data;
+			unsigned string;
+			unsigned text;
 	}symbol_count;
 
 	union {
-		uint _flags;
+		unsigned _flags;
 		struct {
-			uint collect_refs:1;
-			uint trace:1;
+			unsigned collect_refs:1;
+			unsigned trace:1;
 		};
 	};
 }cracker_t;

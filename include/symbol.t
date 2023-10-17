@@ -18,21 +18,21 @@ typedef struct symbol_t {
 	uint32_t pat;
 	uint32_t end_pat;
 
-	uint pass;
-	uint refs;
+	unsigned pass;
+	unsigned refs;
 	struct {
-		uint dst;
-		uint src;
+		unsigned dst;
+		unsigned src;
 	}reg;
 	size_t size;
-	uint type;
-	uint type_subtype;
+	unsigned type;
+	unsigned type_subtype;
 
 	union {
-		uint _flags;
+		unsigned _flags;
 		struct {
-			uint in_bounds:1;
-			uint thumb:1;
+			unsigned in_bounds:1;
+			unsigned thumb:1;
 		};
 	};
 }symbol_t;
