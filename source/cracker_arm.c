@@ -86,11 +86,10 @@ static int arm_inst_b_bl(cracker_p cj)
 
 	if(link) {
 		unsigned bcc = blx ? CC_AL : ARM_IR_CC;
-
 		return(cracker_text_branch_and_link(cj, bcc, new_pc, ARM_IP_NEXT));
 	}
 
-	return(cracker_text_branch_cc(cj, ARM_IR_CC, new_pc, ARM_IP_NEXT));
+	return(cracker_text_branch(cj, ARM_IR_CC, new_pc, ARM_IP_NEXT));
 }
 
 static int arm_inst_bx(cracker_p cj)
@@ -115,11 +114,12 @@ static int arm_inst_bx(cracker_p cj)
 
 	CORE_TRACE_END();
 
-	if(link)
-		cracker_text_branch_link(cj, ARM_IR_CC, ARM_IP_NEXT);
-
+	if(rR_IS_PC_REF(M) && link)
+		return(cracker_text_branch_and_link(cj, ARM_IR_CC, vR(M), ARM_IP_NEXT));
 	if(rR_IS_PC_REF(M))
-		return(cracker_text_branch(cj, ARM_IR_CC, vR(M)));
+		return(cracker_text_branch(cj, ARM_IR_CC, vR(M), ARM_IP_NEXT));
+	if(link)
+		return(cracker_text_branch_link(cj, ARM_IR_CC, ARM_IP_NEXT));
 
 	return(0);
 }
@@ -560,7 +560,7 @@ static int arm_inst_ldstm(cracker_p cj)
 		_CORE_TRACE_("(%s%s, ", rR_NAME(N), ARM_IR_LDST_BIT(w21) ? ".WB " : "");
 	}
 
-	if(!(0 == ARM_IR_LDSTM_BIT(s22))) {
+	if(0) if(!(0 == ARM_IR_LDSTM_BIT(s22))) {
 		CORE_TRACE_END("XXX");
 		return(0);
 	}

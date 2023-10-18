@@ -203,7 +203,7 @@ static int thumb_inst_b(cracker_p cj)
 
 	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x */", new_pc & ~1, THUMB_PC, eao);
 
-	return(cracker_text_branch(cj, CC_AL, new_pc));
+	return(cracker_text_branch(cj, CC_AL, new_pc, 0));
 }
 
 static int thumb_inst_bcc(cracker_p cj)
@@ -216,7 +216,7 @@ static int thumb_inst_bcc(cracker_p cj)
 
 	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x */", new_pc & ~1, THUMB_PC, imm8);
 
-	return(cracker_text_branch_cc(cj, CCv, new_pc, THUMB1_IP_NEXT));
+	return(cracker_text_branch(cj, CCv, new_pc, THUMB1_IP_NEXT));
 }
 
 static int thumb_inst_bx_blx(cracker_p cj)
@@ -240,9 +240,10 @@ static int thumb_inst_bx_blx(cracker_p cj)
 		cracker_text_branch_link(cj, CC_AL, THUMB1_IP_NEXT);
 
 	if(rR_IS_PC_REF(M))
-		return(cracker_text_branch(cj, CC_AL, vR(M)));
+		return(cracker_text_branch(cj, CC_AL, vR(M), 0));
 
-	return(0);
+//	return(0);
+	return(cracker_text_end_if(cj, THUMB1_IP_NEXT, 1));
 }
 
 static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)

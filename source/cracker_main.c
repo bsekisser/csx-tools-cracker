@@ -353,13 +353,33 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 	return(cjs);
 }
 
-int cracker_text_branch(cracker_p cj, unsigned bcc, uint32_t new_pc)
+int cracker_text_branch(cracker_p cj, unsigned bcc, uint32_t new_pc, uint32_t next_pc)
 {
-	PC = new_pc;
 	cracker_text(cj, new_pc);
-	
+
+	switch(bcc) {
+		case CC_AL:
+			PC = new_pc;
+			return(0 && cj->collect_refs);
+		default:
+			cracker_text(cj, next_pc);
+		break;
+	}
+
 	return(0);
 	UNUSED(bcc);
+}
+
+int cracker_text_branch_and_link(cracker_p cj, unsigned bcc, uint32_t new_pc, uint32_t new_lr)
+{
+	LR = new_lr;
+	switch(bcc) {
+		case CC_AL:
+			cracker_text(cj, new_lr);
+		break;
+	}
+
+	return(cracker_text_branch(cj, bcc, new_pc, new_lr));
 }
 
 int cracker_text_branch_link(cracker_p cj, unsigned bcc, uint32_t new_lr)
@@ -371,24 +391,6 @@ int cracker_text_branch_link(cracker_p cj, unsigned bcc, uint32_t new_lr)
 	UNUSED(bcc);
 }
 
-int cracker_text_branch_and_link(cracker_p cj, unsigned bcc, uint32_t new_pc, uint32_t new_lr)
-{
-	cracker_text_branch_link(cj, bcc, new_lr);
-	return(cracker_text_branch(cj, bcc, new_pc));
-}
-
-int cracker_text_branch_cc(cracker_p cj, unsigned bcc, uint32_t new_pc, uint32_t next_pc)
-{
-	if(CC_AL != bcc)
-		cracker_text(cj, next_pc);
-
-	if(cj->collect_refs)
-		return(cracker_text_branch(cj, bcc, new_pc));
-	else
-		return(0);
-
-	UNUSED(bcc);
-}
 
 symbol_p cracker_text_end(cracker_p cj, uint32_t pat)
 {
