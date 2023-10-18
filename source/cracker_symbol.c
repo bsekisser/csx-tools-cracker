@@ -124,10 +124,10 @@ void cracker_symbol_end(symbol_p cjs, uint32_t pat, const char* name)
 	const uint32_t pat_mask = ~(3 >> cjs->thumb);
 	const uint32_t pat_masked = pat & pat_mask;
 
-	if(pat_masked < (cjs->pat & pat_mask))
+	if(pat_masked <= cjs->pat)
 		return;
 
-	if(pat_masked > (cjs->end_pat & pat_mask))
+	if(pat_masked >= cjs->end_pat)
 		return;
 
 	const uint32_t end_pat = pat_masked - 1;
