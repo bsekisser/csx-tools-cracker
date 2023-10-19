@@ -165,6 +165,9 @@ static int arm_inst_cdp_mcr_mrc(cracker_p cj)
 		case mcrc(15, 0, 2, 0, 0):
 			ss = "Translation Table Base Register 0";
 			break;
+		case mcrc(15, 0, 3, 0, 0):
+			ss = "Domain Access Control Register";
+			break;
 		case mcrc(15, 0, 5, 0, 0):
 			ss = "Data Fault Status Register";
 			break;
@@ -177,14 +180,26 @@ static int arm_inst_cdp_mcr_mrc(cracker_p cj)
 		case mcrc(15, 0, 7, 5, 0):
 			ss = "Invalidate ICache";
 			break;
+		case mcrc(15, 0, 7, 6, 0):
+			ss = "Invalidate DCache";
+			break;
 		case mcrc(15, 0, 7, 7, 0):
 			ss = "Invalidate ICache and DCache";
+			break;
+		case mcrc(15, 0, 7, 10, 3):
+			ss = "Test and clean DCache";
 			break;
 		case mcrc(15, 0, 7, 10, 4):
 			ss = "Drain Write Buffer";
 			break;
+		case mcrc(15, 0, 7, 14, 3):
+			ss = "Test, clean, and invalidate DCache";
+			break;
 		case mcrc(15, 0, 8, 5, 0):
 			ss = "Invalidate Instruction TLB";
+			break;
+		case mcrc(15, 0, 8, 6, 0):
+			ss = "Invalidate Data TLB";
 			break;
 		case mcrc(15, 0, 8, 7, 0):
 			ss = "Invalidate TLB";
