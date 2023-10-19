@@ -174,16 +174,23 @@ static int arm_inst_cdp_mcr_mrc(cracker_p cj)
 		case mcrc(15, 0, 7, 0, 4):
 			ss = "Wait For Interrupt";
 			break;
+		case mcrc(15, 0, 7, 5, 0):
+			ss = "Invalidate ICache";
+			break;
 		case mcrc(15, 0, 7, 7, 0):
 			ss = "Invalidate ICache and DCache";
 			break;
 		case mcrc(15, 0, 7, 10, 4):
 			ss = "Drain Write Buffer";
 			break;
+		case mcrc(15, 0, 8, 5, 0):
+			ss = "Invalidate Instruction TLB";
+			break;
 		case mcrc(15, 0, 8, 7, 0):
 			ss = "Invalidate TLB";
 			break;
 		default:
+			cracker_disasm_arm(cj, IP, IR);
 			LOG_ACTION(exit(-1));
 			break;
 	}
