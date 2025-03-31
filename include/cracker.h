@@ -2,7 +2,8 @@
 
 /* **** forward declarations/definitions */
 
-typedef struct cracker_t* cracker_p;
+typedef struct cracker_tag* cracker_ptr;
+typedef cracker_ptr const cracker_ref;
 
 /* **** */
 
@@ -42,8 +43,10 @@ enum {
 
 /* **** */
 
-typedef struct cracker_core_inst_t* cracker_core_inst_p;
-typedef struct cracker_core_inst_t {
+typedef struct cracker_core_inst_tag* cracker_core_inst_ptr;
+typedef cracker_core_inst_ptr const cracker_core_inst_ref;
+
+typedef struct cracker_core_inst_tag {
 	uint32_t ip;
 #define IP CORE_INST->ip
 
@@ -66,8 +69,10 @@ typedef struct cracker_core_inst_t {
 #define vRx(_x) rrCIRx(_x)->v
 #define vR(_x) rrCIR(_x)->v
 
-typedef struct cracker_core_t* cracker_core_p;
-typedef struct cracker_core_t {
+typedef struct cracker_core_tag* cracker_core_ptr;
+typedef cracker_core_ptr const cracker_core_ref;
+
+typedef struct cracker_core_tag {
 	cracker_core_inst_t inst;
 #define CORE_INST (&CORE->inst)
 
@@ -85,8 +90,10 @@ typedef struct cracker_core_t {
 	};
 }cracker_core_t;
 
-typedef struct cracker_content_t* cracker_content_p;
-typedef struct cracker_content_t {
+typedef struct cracker_content_tag* cracker_content_ptr;
+typedef cracker_content_ptr const cracker_content_ref;
+
+typedef struct cracker_content_tag {
 		void* data;
 		void* data_limit;
 
@@ -95,17 +102,16 @@ typedef struct cracker_content_t {
 		size_t size;
 }cracker_content_t;
 
-typedef struct cracker_t* cracker_p;
-typedef struct cracker_t {
+typedef struct cracker_tag {
 	cracker_core_t core;
 #define CORE (&cj->core)
 
 	cracker_content_t content;
 
-	symbol_p symbol;
+	symbol_ptr symbol;
 	unsigned symbol_pass;
 	unsigned symbol_text_mod;
-	symbol_p symbol_qhead;
+	symbol_ptr symbol_qhead;
 
 	struct {
 			unsigned added;
@@ -115,11 +121,15 @@ typedef struct cracker_t {
 	}symbol_count;
 
 	union {
-		unsigned _flags;
+//		unsigned _flags;
 		struct {
 			unsigned collect_refs:1;
-			unsigned trace:1;
 		};
+		struct {
+			unsigned comment:1;
+			unsigned enabled:1;
+			unsigned started:1;
+		}trace;
 	};
 }cracker_t;
 
@@ -138,31 +148,31 @@ typedef struct cracker_t {
 
 /* **** */
 
-void cracker_clear(cracker_p cj);
-void cracker_dump_hex(cracker_p cj, uint32_t start, uint32_t end);
-void cracker_pass(cracker_p cj, int trace);
-int cracker_pat_bounded(cracker_p cj, uint32_t* p2start, uint32_t* p2end);
-int cracker_pat_in_bounds(cracker_p cj, uint32_t pat, size_t size);
-int cracker_pat_out_of_bounds(cracker_p cj, uint32_t pat, size_t size);
-int cracker_pat_range_out_of_bounds(cracker_p cj, uint32_t start, uint32_t end);
-int cracker_pat_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src);
-int cracker_pat_src_limit_if(cracker_p cj, uint32_t pat, uint8_t** src, uint8_t** src_limit);
-uint32_t cracker_read(cracker_p cj, uint32_t pat, size_t size);
-int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data);
-int cracker_read_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src);
-void cracker_relocation(cracker_p cj, uint32_t pat);
-int cracker_step(cracker_p cj);
-symbol_p cracker_text(cracker_p cj, uint32_t pat);
-int cracker_text_branch(cracker_p cj, unsigned cc, uint32_t new_pc, uint32_t next_pc);
-int cracker_text_branch_and_link(cracker_p cj, unsigned cc, uint32_t new_pc, uint32_t new_lr);
-int cracker_text_branch_link(cracker_p cj, unsigned cc, uint32_t new_lr);
-symbol_p cracker_text_end(cracker_p cj, uint32_t pat);
-int cracker_text_end_if(cracker_p cj, uint32_t pat, int end);
+void cracker_clear(cracker_ref cj);
+void cracker_dump_hex(cracker_ref cj, uint32_t start, uint32_t end);
+void cracker_pass(cracker_ref cj, int trace);
+int cracker_pat_bounded(cracker_ref cj, uint32_t* p2start, uint32_t* p2end);
+int cracker_pat_in_bounds(cracker_ref cj, uint32_t pat, size_t size);
+int cracker_pat_out_of_bounds(cracker_ref cj, uint32_t pat, size_t size);
+int cracker_pat_range_out_of_bounds(cracker_ref cj, uint32_t start, uint32_t end);
+int cracker_pat_src_if(cracker_ref cj, uint32_t pat, size_t size, uint8_t** src);
+int cracker_pat_src_limit_if(cracker_ref cj, uint32_t pat, uint8_t** src, uint8_t** src_limit);
+uint32_t cracker_read(cracker_ref cj, uint32_t pat, size_t size);
+int cracker_read_if(cracker_ref cj, uint32_t pat, size_t size, uint32_t* data);
+int cracker_read_src_if(cracker_ref cj, uint32_t pat, size_t size, uint8_t** src);
+void cracker_relocation(cracker_ref cj, uint32_t pat);
+int cracker_step(cracker_ref cj);
+symbol_ptr cracker_text(cracker_ref cj, uint32_t pat);
+int cracker_text_branch(cracker_ref cj, unsigned cc, uint32_t new_pc, uint32_t next_pc);
+int cracker_text_branch_and_link(cracker_ref cj, unsigned cc, uint32_t new_pc, uint32_t new_lr);
+int cracker_text_branch_link(cracker_ref cj, unsigned cc, uint32_t new_lr);
+symbol_ptr cracker_text_end(cracker_ref cj, uint32_t pat);
+int cracker_text_end_if(cracker_ref cj, uint32_t pat, int end);
 
 /* **** */
 
 #define setup_rR_vR(_rx, _rr, _vr) _setup_rR_vR(cj, rrR##_rx, _rr, _vr)
-static inline void _setup_rR_vR(cracker_p cj, uint8_t rx, uint8_t rr, uint32_t vr) {
+static inline void _setup_rR_vR(cracker_ref cj, uint8_t rx, uint8_t rr, uint32_t vr) {
 	rRx(rx) = rr;
 	vRx(rx) = vr;
 }

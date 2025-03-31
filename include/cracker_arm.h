@@ -2,4 +2,4 @@
 
 /* **** */
 
-int arm_step(cracker_p cj);
+int arm_step(cracker_ref cj);

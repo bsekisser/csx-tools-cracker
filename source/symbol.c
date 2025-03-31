@@ -13,10 +13,10 @@
 
 /* **** */
 
-void symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs)
+void symbol_enqueue(symbol_href h2sqh, symbol_ref lhs, symbol_ref cjs)
 {
-	const symbol_p sqh = *h2sqh;
-	const symbol_p rhs = lhs ? ((symbol_p)lhs->qelem.next) : sqh;
+	symbol_ref sqh = *h2sqh;
+	symbol_ref rhs = lhs ? ((symbol_ptr)lhs->qelem.next) : sqh;
 
 	if(rhs)
 		assert(rhs->pat > cjs->pat);
@@ -32,11 +32,11 @@ void symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs)
 		*h2sqh = cjs;
 }
 
-symbol_p symbol_find_pat(symbol_h h2sqh, symbol_h h2lhs, uint32_t pat, uint32_t mask)
+symbol_ptr symbol_find_pat(symbol_href h2sqh, symbol_href h2lhs, uint32_t pat, uint32_t mask)
 {
 	assert(0 != h2sqh);
 
-	symbol_p rhs = *h2sqh;
+	symbol_ptr rhs = *h2sqh;
 
 	const uint32_t masked_pat = pat & mask;
 
@@ -49,15 +49,15 @@ symbol_p symbol_find_pat(symbol_h h2sqh, symbol_h h2lhs, uint32_t pat, uint32_t 
 		if(h2lhs)
 			*h2lhs = rhs;
 
-		rhs = (symbol_p)rhs->qelem.next;
+		rhs = (symbol_ptr)rhs->qelem.next;
 	}
 
 	return(0);
 }
 
-symbol_p symbol_new(uint32_t pat, size_t size, unsigned type)
+symbol_ptr symbol_new(uint32_t pat, size_t size, unsigned type)
 {
-	const symbol_p cjs = calloc(1, sizeof(symbol_t));
+	symbol_ref cjs = calloc(1, sizeof(symbol_t));
 
 	cjs->pat = pat;
 	BSET(cjs->size, size);
@@ -66,14 +66,12 @@ symbol_p symbol_new(uint32_t pat, size_t size, unsigned type)
 	return(cjs);
 }
 
-symbol_p symbol_next(symbol_h h2lhs, symbol_p cjs)
+symbol_ptr symbol_next(symbol_href h2lhs, symbol_ref cjs)
 {
 	assert(0 != cjs);
 
 	if(h2lhs)
 		*h2lhs = cjs;
 
-	cjs = (symbol_p)cjs->qelem.next;
-
-	return(cjs);
+	return((symbol_ptr)cjs->qelem.next);
 }

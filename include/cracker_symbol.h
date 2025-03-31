@@ -25,10 +25,10 @@ enum {
 
 /* **** */
 
-void cracker_symbol_end(symbol_p cjs, uint32_t pat, const char* name);
-void cracker_symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs);
-symbol_p cracker_symbol_find(cracker_p cj, symbol_h h2lhs, uint32_t pat, uint32_t mask);
-int32_t cracker_symbol_intergap(cracker_p cj, symbol_p lhs, symbol_p rhs);
-void cracker_symbol_queue_log(cracker_p cj, symbol_p sqh);
-int cracker_symbol_step(cracker_p cj, symbol_p cjs);
-int cracker_symbol_step_block(cracker_p cj, symbol_p cjs);
+void cracker_symbol_end(symbol_ref cjs, uint32_t pat, const char* name);
+void cracker_symbol_enqueue(symbol_href h2sqh, symbol_ref lhs, symbol_ref cjs);
+symbol_ptr cracker_symbol_find(cracker_ref cj, symbol_href h2lhs, uint32_t pat, uint32_t mask);
+int32_t cracker_symbol_intergap(cracker_ref cj, symbol_ref lhs, symbol_ref rhs);
+void cracker_symbol_queue_log(cracker_ref cj, symbol_ref sqh);
+int cracker_symbol_step(cracker_ref cj, symbol_ref cjs);
+int cracker_symbol_step_block(cracker_ref cj, symbol_ref cjs);

@@ -1,6 +1,5 @@
 #include "cracker.h"
 #include "cracker_arm.h"
-#include "cracker_arm_ir.h"
 #include "cracker_data.h"
 #include "cracker_enum.h"
 #include "cracker_strings.h"
@@ -33,7 +32,7 @@
 
 /* **** */
 
-void cracker_clear(cracker_p cj)
+void cracker_clear(cracker_ref cj)
 {
 	for(int i = 0; i < 16; i++) {
 		vGPR(i) = 0;
@@ -47,7 +46,7 @@ void cracker_clear(cracker_p cj)
 	}
 }
 
-static void cracker_pass_step(cracker_p cj, symbol_p cjs, int trace)
+static void cracker_pass_step(cracker_ref cj, symbol_ref cjs, int trace)
 {
 	if(0 == cjs->in_bounds)
 		return;
@@ -75,7 +74,7 @@ static void cracker_pass_step(cracker_p cj, symbol_p cjs, int trace)
 		printf("\n");
 }
 
-void cracker_dump_hex(cracker_p cj, uint32_t start, uint32_t end)
+void cracker_dump_hex(cracker_ref cj, uint32_t start, uint32_t end)
 {
 	const unsigned stride = 31;
 //	const unsigned stride = 15;
@@ -122,7 +121,7 @@ void cracker_dump_hex(cracker_p cj, uint32_t start, uint32_t end)
 	}while(pat < eend);
 }
 
-void cracker_pass(cracker_p cj, int trace)
+void cracker_pass(cracker_ref cj, int trace)
 {
 	printf("\n\n/* pass %u **** **** **** **** */\n\n", cj->symbol_pass);
 
@@ -132,7 +131,7 @@ void cracker_pass(cracker_p cj, int trace)
 
 	unsigned pass_symbol_count = 0;
 
-	symbol_p cjs = cj->symbol_qhead;
+	symbol_ptr cjs = cj->symbol_qhead;
 
 	while(cjs) {
 		cracker_pass_step(cj, cjs, trace);
@@ -154,7 +153,7 @@ void cracker_pass(cracker_p cj, int trace)
 
 /* **** */
 
-int cracker_pat_bounded(cracker_p cj, uint32_t* p2start, uint32_t* p2end)
+int cracker_pat_bounded(cracker_ref cj, uint32_t* p2start, uint32_t* p2end)
 {
 	if(*p2end <= cj->content.base)
 		return(0);
@@ -171,12 +170,12 @@ int cracker_pat_bounded(cracker_p cj, uint32_t* p2start, uint32_t* p2end)
 	return(1);
 }
 
-int cracker_pat_in_bounds(cracker_p cj, uint32_t pat, size_t size)
+int cracker_pat_in_bounds(cracker_ref cj, uint32_t pat, size_t size)
 {
 	return(0 == cracker_pat_out_of_bounds(cj, pat, size));
 }
 
-int cracker_pat_out_of_bounds(cracker_p cj, uint32_t pat, size_t size)
+int cracker_pat_out_of_bounds(cracker_ref cj, uint32_t pat, size_t size)
 {
 	if(pat < cj->content.base)
 		return(1);
@@ -187,7 +186,7 @@ int cracker_pat_out_of_bounds(cracker_p cj, uint32_t pat, size_t size)
 	return(0);
 }
 
-int cracker_pat_range_out_of_bounds(cracker_p cj, uint32_t start, uint32_t end)
+int cracker_pat_range_out_of_bounds(cracker_ref cj, uint32_t start, uint32_t end)
 {
 	if(cracker_pat_out_of_bounds(cj, start, 0))
 		return(1);
@@ -198,7 +197,7 @@ int cracker_pat_range_out_of_bounds(cracker_p cj, uint32_t start, uint32_t end)
 	return(0);
 }
 
-int cracker_pat_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src)
+int cracker_pat_src_if(cracker_ref cj, uint32_t pat, size_t size, uint8_t** src)
 {
 	assert(0 != src);
 
@@ -211,7 +210,7 @@ int cracker_pat_src_if(cracker_p cj, uint32_t pat, size_t size, uint8_t** src)
 	return(1);
 }
 
-int cracker_pat_src_limit_if(cracker_p cj, uint32_t pat, uint8_t** src_start, uint8_t** src_limit)
+int cracker_pat_src_limit_if(cracker_ref cj, uint32_t pat, uint8_t** src_start, uint8_t** src_limit)
 {
 	assert(0 != src_limit);
 	assert(0 != src_start);
@@ -225,7 +224,7 @@ int cracker_pat_src_limit_if(cracker_p cj, uint32_t pat, uint8_t** src_start, ui
 
 /* **** */
 
-uint32_t cracker_read(cracker_p cj, uint32_t pat, size_t size)
+uint32_t cracker_read(cracker_ref cj, uint32_t pat, size_t size)
 {
 	uint32_t data = 0;
 
@@ -233,7 +232,7 @@ uint32_t cracker_read(cracker_p cj, uint32_t pat, size_t size)
 	return(data);
 }
 
-int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data)
+int cracker_read_if(cracker_ref cj, uint32_t pat, size_t size, uint32_t* data)
 {
 	*data = 0;
 
@@ -249,7 +248,7 @@ int cracker_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data)
 
 /* **** */
 
-void cracker_relocation_step(cracker_p cj, uint32_t pat)
+void cracker_relocation_step(cracker_ref cj, uint32_t pat)
 {
 	const uint32_t savedPC = PC;
 	const uint32_t saved_symbol_text_mod = cj->symbol_text_mod;
@@ -263,7 +262,7 @@ void cracker_relocation_step(cracker_p cj, uint32_t pat)
 	cj->symbol_text_mod = saved_symbol_text_mod;
 }
 
-void cracker_relocation(cracker_p cj, uint32_t pat)
+void cracker_relocation(cracker_ref cj, uint32_t pat)
 {
 	const void* src_start = cj->content.data;
 	const void* src_limit = cj->content.data_limit;
@@ -310,7 +309,7 @@ void cracker_relocation(cracker_p cj, uint32_t pat)
 
 /* **** */
 
-int cracker_step(cracker_p cj)
+int cracker_step(cracker_ref cj)
 {
 	if(PC & 1)
 		return(thumb_step(cj));
@@ -320,12 +319,12 @@ int cracker_step(cracker_p cj)
 
 /* **** */
 
-symbol_p cracker_text(cracker_p cj, uint32_t pat)
+symbol_ptr cracker_text(cracker_ref cj, uint32_t pat)
 {
-	symbol_h sqh = &cj->symbol_qhead;
+	symbol_href sqh = &cj->symbol_qhead;
 
-	symbol_p lhs = 0;
-	symbol_p cjs = symbol_find_pat(sqh, &lhs, pat, ~1U);
+	symbol_ptr lhs = 0;
+	symbol_ptr cjs = symbol_find_pat(sqh, &lhs, pat, ~1U);
 
 	if(cjs) {
 		BSET(cjs->size, sizeof(uint32_t));
@@ -353,7 +352,7 @@ symbol_p cracker_text(cracker_p cj, uint32_t pat)
 	return(cjs);
 }
 
-int cracker_text_branch(cracker_p cj, unsigned bcc, uint32_t new_pc, uint32_t next_pc)
+int cracker_text_branch(cracker_ref cj, unsigned bcc, uint32_t new_pc, uint32_t next_pc)
 {
 	cracker_text(cj, new_pc);
 
@@ -370,7 +369,7 @@ int cracker_text_branch(cracker_p cj, unsigned bcc, uint32_t new_pc, uint32_t ne
 	UNUSED(bcc);
 }
 
-int cracker_text_branch_and_link(cracker_p cj, unsigned bcc, uint32_t new_pc, uint32_t new_lr)
+int cracker_text_branch_and_link(cracker_ref cj, unsigned bcc, uint32_t new_pc, uint32_t new_lr)
 {
 	LR = new_lr;
 	switch(bcc) {
@@ -382,7 +381,7 @@ int cracker_text_branch_and_link(cracker_p cj, unsigned bcc, uint32_t new_pc, ui
 	return(cracker_text_branch(cj, bcc, new_pc, new_lr));
 }
 
-int cracker_text_branch_link(cracker_p cj, unsigned bcc, uint32_t new_lr)
+int cracker_text_branch_link(cracker_ref cj, unsigned bcc, uint32_t new_lr)
 {
 	LR = new_lr;
 	cracker_text(cj, new_lr);
@@ -392,12 +391,12 @@ int cracker_text_branch_link(cracker_p cj, unsigned bcc, uint32_t new_lr)
 }
 
 
-symbol_p cracker_text_end(cracker_p cj, uint32_t pat)
+symbol_ptr cracker_text_end(cracker_ref cj, uint32_t pat)
 {
-	symbol_h sqh = &cj->symbol_qhead;
+	symbol_href sqh = &cj->symbol_qhead;
 
-	symbol_p lhs = 0;
-	symbol_p cjs = symbol_find_pat(sqh, &lhs, pat, ~1U);
+	symbol_ptr lhs = 0;
+	symbol_ptr cjs = symbol_find_pat(sqh, &lhs, pat, ~1U);
 
 	cracker_symbol_end(lhs, pat, "cracker_text_end -- lhs");
 	cracker_symbol_end(cjs, pat, "cracker_text_end -- cjs");
@@ -405,7 +404,7 @@ symbol_p cracker_text_end(cracker_p cj, uint32_t pat)
 	return(cjs);
 }
 
-int cracker_text_end_if(cracker_p cj, uint32_t pat, int end)
+int cracker_text_end_if(cracker_ref cj, uint32_t pat, int end)
 {
 	if(end)
 		cracker_text_end(cj, pat);

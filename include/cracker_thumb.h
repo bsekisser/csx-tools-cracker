@@ -2,4 +2,4 @@
 
 /* **** */
 
-int thumb_step(cracker_p cj);
+int thumb_step(cracker_ref cj);

@@ -38,12 +38,12 @@ static uint8_t* _skip(uint8_t* src_start, uint8_t* src_limit, int (*test)(int))
 	return(src);
 }
 
-symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size, size_t len)
+symbol_ptr cracker_data(cracker_ref cj, uint32_t pat, size_t size, size_t len)
 {
-	symbol_h sqh = &cj->symbol_qhead;
+	symbol_href sqh = &cj->symbol_qhead;
 
-	symbol_p lhs = 0;
-	symbol_p cjs = symbol_find_pat(sqh, &lhs, pat, ~0U);
+	symbol_ptr lhs = 0;
+	symbol_ptr cjs = symbol_find_pat(sqh, &lhs, pat, ~0U);
 
 	if(cjs) {
 		BSET(cjs->size, size);
@@ -65,7 +65,7 @@ symbol_p cracker_data(cracker_p cj, uint32_t pat, size_t size, size_t len)
 }
 
 
-uint32_t cracker_data_ptr_read(cracker_p cj, uint32_t pat, size_t size)
+uint32_t cracker_data_ptr_read(cracker_ref cj, uint32_t pat, size_t size)
 {
 	uint32_t data_pat = 0;
 	if(cracker_data_read_if(cj, pat, sizeof(uint32_t), &data_pat))
@@ -74,7 +74,7 @@ uint32_t cracker_data_ptr_read(cracker_p cj, uint32_t pat, size_t size)
 	return(0);
 }
 
-uint32_t cracker_data_read(cracker_p cj, uint32_t pat, size_t size)
+uint32_t cracker_data_read(cracker_ref cj, uint32_t pat, size_t size)
 {
 	uint32_t data = 0;
 
@@ -82,13 +82,13 @@ uint32_t cracker_data_read(cracker_p cj, uint32_t pat, size_t size)
 	return(data);
 }
 
-int cracker_data_read_if(cracker_p cj, uint32_t pat, size_t size, uint32_t* data)
+int cracker_data_read_if(cracker_ref cj, uint32_t pat, size_t size, uint32_t* data)
 {
 	cracker_data(cj, pat, size, 0);
 	return(cracker_read_if(cj, pat, size, data));
 }
 
-symbol_p cracker_data_string(cracker_p cj, uint32_t start_pat)
+symbol_ptr cracker_data_string(cracker_ref cj, uint32_t start_pat)
 {
 	int subtype = SYMBOL_STRING_CSTRING;
 
@@ -116,7 +116,7 @@ symbol_p cracker_data_string(cracker_p cj, uint32_t start_pat)
 
 	const uint32_t pat = start_pat + (string_start - src_start);
 
-	symbol_p cjs = cracker_symbol_find(cj, 0, pat, ~0U);
+	symbol_ptr cjs = cracker_symbol_find(cj, 0, pat, ~0U);
 	if(cjs)
 		return(0);
 
@@ -133,7 +133,7 @@ symbol_p cracker_data_string(cracker_p cj, uint32_t start_pat)
 	return(cjs);
 }
 
-symbol_p cracker_data_string_rel(cracker_p cj, uint32_t pat)
+symbol_ptr cracker_data_string_rel(cracker_ref cj, uint32_t pat)
 {
 	pat += cj->content.base;
 	return(cracker_data_string(cj, pat));

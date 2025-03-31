@@ -34,7 +34,7 @@
 
 /* **** */
 
-static int _fetch(cracker_p cj, uint32_t* p2ir)
+static int _fetch(cracker_ref cj, uint32_t* p2ir)
 {
 	IP = PC;
 	PC += sizeof(uint16_t);
@@ -44,7 +44,7 @@ static int _fetch(cracker_p cj, uint32_t* p2ir)
 
 /* **** */
 
-static int thumb_inst_add_rd_pcsp_i(cracker_p cj)
+static int thumb_inst_add_rd_pcsp_i(cracker_ref cj)
 {
 	const uint16_t imm8 = mlBFMOV(IR, 7, 0, 2);
 	const int is_sp = BEXT(IR, 11);
@@ -77,7 +77,7 @@ static int thumb_inst_add_rd_pcsp_i(cracker_p cj)
 	return(1);
 }
 
-static int thumb_inst_add_sub_rn_rd(cracker_p cj)
+static int thumb_inst_add_sub_rn_rd(cracker_ref cj)
 {
 	/* 0x1800 -- ADD  -- 0001 100m mmnn nddd
 	 * 0x1a00 -- SUB  -- 0001 101m mmnn nddd
@@ -130,7 +130,7 @@ static int thumb_inst_add_sub_rn_rd(cracker_p cj)
 	return(1);
 }
 
-static int thumb_inst_add_sub_sp_i(cracker_p cj)
+static int thumb_inst_add_sub_sp_i(cracker_ref cj)
 {
 	const uint16_t imm7 = mlBFMOV(IR, 6, 0, 2);
 	const int is_sub = BEXT(IR, 7);
@@ -147,7 +147,7 @@ enum {
 	THUMB_ASCM_SUB,
 };
 
-static int thumb_inst_ascm_i(cracker_p cj)
+static int thumb_inst_ascm_i(cracker_ref cj)
 {
 	/* 0x2000 -- MOVS -- 0010 0ddd iiii iiii
 	 * 0x2800 -- CMPS -- 0010 1nnn iiii iiii
@@ -197,7 +197,7 @@ static int thumb_inst_ascm_i(cracker_p cj)
 	return(1);
 }
 
-static int thumb_inst_b(cracker_p cj)
+static int thumb_inst_b(cracker_ref cj)
 {
 	const int32_t eao = mlBFMOVs(IR, 10, 0, 1);
 	const uint32_t new_pc = THUMB1_PC + eao;
@@ -207,7 +207,7 @@ static int thumb_inst_b(cracker_p cj)
 	return(cracker_text_branch(cj, CC_AL, new_pc, 0));
 }
 
-static int thumb_inst_bcc(cracker_p cj)
+static int thumb_inst_bcc(cracker_ref cj)
 {
 	CCv = mlBFEXT(IR, 11, 8);
 
@@ -220,7 +220,7 @@ static int thumb_inst_bcc(cracker_p cj)
 	return(cracker_text_branch(cj, CCv, new_pc, THUMB1_IP_NEXT));
 }
 
-static int thumb_inst_bx_blx(cracker_p cj)
+static int thumb_inst_bx_blx(cracker_ref cj)
 {
 	const int link = BEXT(IR, 7);
 
@@ -247,7 +247,7 @@ static int thumb_inst_bx_blx(cracker_p cj)
 	return(cracker_text_end_if(cj, THUMB1_IP_NEXT, 1));
 }
 
-static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
+static int thumb_inst_bxx__bl_blx(cracker_ref cj, uint32_t eao, int blx)
 {
 	const uint32_t new_pc = ((LR + eao) & (blx ? ~3 : ~1)) | (blx ? 0 : 1);
 
@@ -272,14 +272,14 @@ static int thumb_inst_bxx__bl_blx(cracker_p cj, uint32_t eao, int blx)
 	return(cracker_text_branch_and_link(cj, CC_AL, new_pc, new_lr));
 }
 
-static int thumb_inst_bxx_bl_blx(cracker_p cj)
+static int thumb_inst_bxx_bl_blx(cracker_ref cj)
 {
 	const uint32_t eao = mlBFMOV(IR, 10, 0, 1);
 
 	return(thumb_inst_bxx__bl_blx(cj, eao, 1 ^ BEXT(IR, 12)));
 }
 
-static int thumb_inst_bxx_prefix(cracker_p cj)
+static int thumb_inst_bxx_prefix(cracker_ref cj)
 {
 	const int32_t eao_prefix = mlBFMOVs(IR, 10, 0, 12);
 	const uint8_t h_prefix = mlBFEXT(IR, 12, 11);
@@ -308,7 +308,7 @@ return_not_prefix_suffix:
 	return(0);
 }
 
-static int thumb_inst_dpr_rms_rdn(cracker_p cj)
+static int thumb_inst_dpr_rms_rdn(cracker_ref cj)
 {
 	const unsigned operation = mlBFEXT(IR, 9, 6);
 
@@ -366,7 +366,7 @@ static int thumb_inst_dpr_rms_rdn(cracker_p cj)
 	return(1);
 }
 
-static int thumb_inst_ldst_bwh_o_rn_rd(cracker_p cj)
+static int thumb_inst_ldst_bwh_o_rn_rd(cracker_ref cj)
 {
 	const int bit_h = BEXT(IR, 15);
 	const int bit_b = BEXT(IR, 12);
@@ -422,7 +422,7 @@ static int thumb_inst_ldst_bwh_o_rn_rd(cracker_p cj)
 	return(1);
 }
 
-static int thumb_inst_ldst_op_rm_rn_rd(cracker_p cj)
+static int thumb_inst_ldst_op_rm_rn_rd(cracker_ref cj)
 {
 	/* 0x5600 -- LDRSB -- 0101 011m mmnn nddd
 	 * 0x5700 -- LDRSB -- 0101 111m mmnn nddd
@@ -496,7 +496,7 @@ static int thumb_inst_ldst_op_rm_rn_rd(cracker_p cj)
 	return(1);
 }
 
-static int thumb_inst_ldst_rd_i(cracker_p cj)
+static int thumb_inst_ldst_rd_i(cracker_ref cj)
 {
 	const int bit_l = BEXT(IR, 11);
 	const uint16_t offset = mlBFMOV(IR, 7, 0, 2);
@@ -540,7 +540,7 @@ static int thumb_inst_ldst_rd_i(cracker_p cj)
 	return(1);
 }
 
-static int thumb_inst_ldstm(cracker_p cj)
+static int thumb_inst_ldstm(cracker_ref cj)
 {
 	const int bit_l = BEXT(IR, 11);
 
@@ -566,7 +566,7 @@ static int thumb_inst_ldstm(cracker_p cj)
 	return(1);
 }
 
-static int thumb_inst_pop_push(cracker_p cj)
+static int thumb_inst_pop_push(cracker_ref cj)
 {
 	const int bit_l = BEXT(IR, 11);
 	const int bit_r = BEXT(IR, 8);
@@ -591,7 +591,7 @@ static int thumb_inst_pop_push(cracker_p cj)
 	return(!(bit_r && bit_l));
 }
 
-static int thumb_inst_sdp_rms_rdn(cracker_p cj)
+static int thumb_inst_sdp_rms_rdn(cracker_ref cj)
 {
 /* 0x4400 -- ADD  -- 0100 0100 dmmm mddd
  * 0x4600 -- MOV  -- 0100 0110 dmmm mddd
@@ -649,7 +649,7 @@ static int thumb_inst_sdp_rms_rdn(cracker_p cj)
 	return(!rR_IS_PC(D));
 }
 
-static int thumb_inst_shift_i(cracker_p cj)
+static int thumb_inst_shift_i(cracker_ref cj)
 {
 	/* 0x0000 -- LSL -- 0000 0iii iimm mddd
 	 * 0x0800 -- LSR -- 0000 1iii iimm mddd
@@ -708,7 +708,7 @@ static int thumb_inst_shift_i(cracker_p cj)
 
 #define _return(_x) _x
 
-static int thumb_step__fail_decode(cracker_p cj, int crap)
+static int thumb_step__fail_decode(cracker_ref cj, int crap)
 {
 	for(uint8_t lsb = 13; lsb > 8; lsb--) {
 		uint32_t opcode = mlBFTST(IR, 15, lsb);
@@ -733,7 +733,7 @@ static int thumb_step__fail_decode(cracker_p cj, int crap)
 	return(0);
 }
 
-static int thumb_step_group0_0000_1fff(cracker_p cj)
+static int thumb_step_group0_0000_1fff(cracker_ref cj)
 {
 	switch(mlBFTST(IR, 15, 10)) {
 		case 0x1800: /* 0001 10xx xxxx xxxx */
@@ -747,7 +747,7 @@ static int thumb_step_group0_0000_1fff(cracker_p cj)
 	LOG_ACTION(return(thumb_step__fail_decode(cj, 1)));
 }
 
-static int thumb_step_group2_4000_5fff(cracker_p cj)
+static int thumb_step_group2_4000_5fff(cracker_ref cj)
 {
 	if(0x5000 == mlBFTST(IR, 15, 12)) /* 0101 xxxx xxxx xxxx */
 		return(thumb_inst_ldst_op_rm_rn_rd(cj));
@@ -771,7 +771,7 @@ static int thumb_step_group2_4000_5fff(cracker_p cj)
 	LOG_ACTION(return(thumb_step__fail_decode(cj, 1)));
 }
 
-static int thumb_step_group5_b000_bfff(cracker_p cj)
+static int thumb_step_group5_b000_bfff(cracker_ref cj)
 {
 	switch(mlBFTST(IR, 15, 8)) {
 		case 0xb000: /* 1011 0000 xxxx xxxx */
@@ -789,7 +789,7 @@ static int thumb_step_group5_b000_bfff(cracker_p cj)
 	LOG_ACTION(return(thumb_step__fail_decode(cj, 1)));
 }
 
-static int thumb_step_group6_c000_dfff(cracker_p cj)
+static int thumb_step_group6_c000_dfff(cracker_ref cj)
 {
 	if(BTST(IR, 12)) {
 		switch(mlBFTST(IR, 15, 8)) {
@@ -805,7 +805,7 @@ static int thumb_step_group6_c000_dfff(cracker_p cj)
 	LOG_ACTION(return(thumb_step__fail_decode(cj, 1)));
 }
 
-static int thumb_step_group7_e000_ffff(cracker_p cj)
+static int thumb_step_group7_e000_ffff(cracker_ref cj)
 {
 	switch(mlBFTST(IR, 15, 11)) { /* fedc bxxx xxxx xxxx */
 		case 0xe000: /* 1110 0xxx xxxx xxxx */
@@ -823,7 +823,7 @@ static int thumb_step_group7_e000_ffff(cracker_p cj)
 	LOG_ACTION(return(thumb_step__fail_decode(cj, 1)));
 }
 
-int thumb_step(cracker_p cj)
+int thumb_step(cracker_ref cj)
 {
 	if(!_fetch(cj, &IR))
 		return(0);

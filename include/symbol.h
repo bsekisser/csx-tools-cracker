@@ -12,9 +12,13 @@
 
 /* **** */
 
-typedef struct symbol_t** symbol_h;
-typedef struct symbol_t* symbol_p;
-typedef struct symbol_t {
+typedef struct symbol_tag** symbol_hptr;
+typedef symbol_hptr const symbol_href;
+
+typedef struct symbol_tag* symbol_ptr;
+typedef symbol_ptr const symbol_ref;
+
+typedef struct symbol_tag {
 	qelem_t qelem;
 
 	uint32_t pat;
@@ -39,7 +43,7 @@ typedef struct symbol_t {
 	};
 }symbol_t;
 
-void symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs);
-symbol_p symbol_find_pat(symbol_h h2sqh, symbol_h h2lhs, uint32_t pat, uint32_t mask);
-symbol_p symbol_new(uint32_t pat, size_t size, unsigned type);
-symbol_p symbol_next(symbol_h h2lhs, symbol_p cjs);
+void symbol_enqueue(symbol_href h2sqh, symbol_ref lhs, symbol_ref cjs);
+symbol_ptr symbol_find_pat(symbol_href h2sqh, symbol_href h2lhs, uint32_t pat, uint32_t mask);
+symbol_ptr symbol_new(uint32_t pat, size_t size, unsigned type);
+symbol_ptr symbol_next(symbol_href h2lhs, symbol_ref cjs);

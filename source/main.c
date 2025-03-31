@@ -29,14 +29,14 @@
 
 /* **** */
 
-static int __scrounge_text_xxx(cracker_p cj) {
+static int __scrounge_text_xxx(cracker_ref cj) {
 	while(cracker_step(cj))
 		;
 
 	return(cj->symbol_count.added);
 }
 
-static int _scrounge_block__arm(cracker_p cj, int safe) {
+static int _scrounge_block__arm(cracker_ref cj, int safe) {
 	if(0 != (PC & 3))
 		return(0);
 
@@ -60,14 +60,14 @@ static int _scrounge_block__arm(cracker_p cj, int safe) {
 	UNUSED(safe);
 }
 
-static symbol_p _scrounge_block__strings(cracker_p cj, uint32_t start, uint32_t end) {
+static symbol_ptr _scrounge_block__strings(cracker_ref cj, uint32_t start, uint32_t end) {
 	const size_t byte_count = 1 + end - start;
 	LOG("start: 0x%08x, end: 0x%08x, byte_count = 0x%08zx", start, end, byte_count);
 
 	if(!cracker_pat_bounded(cj, &start, &end))
 		return(0);
 
-	symbol_p cjs = 0;
+	symbol_ptr cjs = 0;
 	for(uint32_t pat = start; pat < end; pat++) {
 		cjs = cracker_data_string(cj, pat);
 		if(cjs)
@@ -77,7 +77,7 @@ static symbol_p _scrounge_block__strings(cracker_p cj, uint32_t start, uint32_t 
 	return(cjs);
 }
 
-static int _scrounge_block__thumb(cracker_p cj, int safe) {
+static int _scrounge_block__thumb(cracker_ref cj, int safe) {
 	PC |= 1;
 
 	if(!safe && (0xf000f800 == (0xf000f800 & IR)))
@@ -103,7 +103,7 @@ static int _scrounge_block__thumb(cracker_p cj, int safe) {
 	return(0);
 }
 
-static int _scrounge_block(cracker_p cj, uint32_t start, uint32_t end, int safe) {
+static int _scrounge_block(cracker_ref cj, uint32_t start, uint32_t end, int safe) {
 	const size_t byte_count = 1 + end - start;
 	LOG("start: 0x%08x, end: 0x%08x, byte_count = 0x%08zx", start, end, byte_count);
 
@@ -133,12 +133,12 @@ static int _scrounge_block(cracker_p cj, uint32_t start, uint32_t end, int safe)
 	return(0);
 }
 
-static void _scrounge_pass_strings(cracker_p cj) {
+static void _scrounge_pass_strings(cracker_ref cj) {
 	/* scrounge pass */
-	symbol_p rhs = cj->symbol_qhead;
+	symbol_ptr rhs = cj->symbol_qhead;
 
 	do {
-		symbol_p lhs = rhs;
+		symbol_ref lhs = rhs;
 		rhs = symbol_next(0, rhs);
 
 		assert(lhs != rhs);
@@ -148,7 +148,7 @@ static void _scrounge_pass_strings(cracker_p cj) {
 				const uint32_t lhs_end_pat = 1 + lhs->end_pat;
 				const uint32_t rhs_pat = -1 + rhs->pat;
 
-				symbol_p cjs = _scrounge_block__strings(cj, lhs_end_pat, rhs_pat);
+				symbol_ptr cjs = _scrounge_block__strings(cj, lhs_end_pat, rhs_pat);
 				if(cjs) {
 					LOG("lhs = 0x%08" PRIxPTR ", cjs = 0x%08" PRIxPTR ", rhs = 0x%08" PRIxPTR,
 						(uintptr_t)lhs, (uintptr_t)cjs, (uintptr_t)rhs);
@@ -161,12 +161,12 @@ static void _scrounge_pass_strings(cracker_p cj) {
 	}while(rhs);
 }
 
-static symbol_p _scrounge_pass(cracker_p cj, symbol_p cjs, int safe) {
+static symbol_ptr _scrounge_pass(cracker_ref cj, symbol_ref cjs, int safe) {
 	/* scrounge pass */
-	symbol_p rhs = cjs ?: cj->symbol_qhead;
+	symbol_ptr rhs = cjs ?: cj->symbol_qhead;
 
 	do {
-		symbol_p lhs = rhs;
+		symbol_ref lhs = rhs;
 		rhs = symbol_next(0, rhs);
 
 		assert(lhs != rhs);
@@ -186,7 +186,7 @@ static symbol_p _scrounge_pass(cracker_p cj, symbol_p cjs, int safe) {
 	return(0);
 }
 
-static void load_content(cracker_content_p content, const char* file_name)
+static void load_content(cracker_content_ptr content, const char* file_name)
 {
 	char out[256];
 	snprintf(out, 254, "%s%s%s", LOCAL_RGNDIR, RGNFileName, file_name);
@@ -217,7 +217,7 @@ static void load_content(cracker_content_p content, const char* file_name)
 
 int main(void)
 {
-	cracker_p cj = calloc(1, sizeof(cracker_t));
+	cracker_ref cj = calloc(1, sizeof(cracker_t));
 
 	const int loader = 1;
 
@@ -328,7 +328,7 @@ int main(void)
 	}
 
 	int safe = 1;
-	symbol_p cjs = 0;
+	symbol_ptr cjs = 0;
 
 	for(cj->symbol_pass = 1; cj->symbol_count.added; cj->symbol_pass++)
 //	for(cj->symbol_pass = 1; cj->symbol_pass <= 3; cj->symbol_pass++)
