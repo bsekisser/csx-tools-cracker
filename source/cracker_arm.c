@@ -456,13 +456,13 @@ static int arm_inst_ldst_immediate(cracker_ref cj)
 	const size_t size = ARM_IR_LDST_BIT(b22) ? sizeof(uint8_t) : sizeof(uint32_t);
 
 	if(rR_IS_PC(N) || rR_IS_PC_REF(N)) {
-		_itrace_comment_start(cj, "[0x%08x]", pat);
+		_itrace_comment_start(cj, "[0x%08x:%u]", pat, size);
 
 		if(cracker_data_read_if(cj, pat, size, &vR(D))) {
 			if(ARM_IR_LDST_BIT(b22)) {
-				_itrace(cj, ":0x%02x", vR(D));
+				_itrace(cj, " => 0x%02x", vR(D));
 			} else {
-				_itrace(cj, ":0x%08x", vR(D));
+				_itrace(cj, " => 0x%08x", vR(D));
 			}
 		}
 
@@ -501,6 +501,9 @@ static int arm_inst_ldst_scaled_register_offset(cracker_ref cj)
 			rR_NAME(M), vR(S));
 	}
 
+	if(ARM_IR_LDST_BIT(l20))
+		cracker_reg_dst_wb(cj, rrRD);
+
 	_itrace_end(cj, ")");
 
 	const int ldpc = ARM_IR_LDST_BIT(l20) && rR_IS_PC(D) && (CC_AL == ARM_IR_CC);
@@ -523,10 +526,24 @@ static int arm_inst_ldst_sh_immediate_offset(cracker_ref cj)
 		const uint32_t pat = vR(N) + offset;
 		const size_t size = ARM_IR_LDST_SH_FLAG_D ? 8 : (ARM_IR_LDST_SH_FLAG_H ? 2 : 1);
 
-		cracker_data(cj, pat, size, 0);
+		_itrace_comment(cj, "[0x%08x:%u]", pat, size);
 
-		_itrace_comment(cj, "[0x%08x]", pat);
+		if(cracker_data_read_if(cj, pat, size, &vR(D))) {
+			switch(size) {
+				case 2:
+					_itrace(cj, " => 0x%04x", vR(D));
+					break;
+				case 1:
+					_itrace(cj, " => 0x%02x", vR(D));
+					break;
+				default:
+					LOG_ACTION(exit(-1));
+			}
+		}
 	}
+
+	if(ARM_IR_LDST_BIT(l20))
+		cracker_reg_dst_wb(cj, rrRD);
 
 	_itrace_end(cj, 0);
 
@@ -545,6 +562,9 @@ static int arm_inst_ldst_sh_register_offset(cracker_ref cj)
 	}
 
 	setup_rR_src(M, ARM_IR_RM);
+
+	if(ARM_IR_LDST_BIT(l20))
+		cracker_reg_dst_wb(cj, rrRD);
 
 	_itrace_end(cj, ", %s%s", ARM_IR_LDST_BIT(u23) ? "" : "-", rR_NAME(M));
 
@@ -577,9 +597,10 @@ static int arm_inst_ldstm(cracker_ref cj)
 	for(int i = 0; i <= 15; i++) {
 		if(BEXT(IR, i)) {
 			*dst++ = (i <= 9  ? '0' : 'a' - 10) + i;
-			if(ARM_IR_LDST_BIT(l20))
+			if(ARM_IR_LDST_BIT(l20)) {
 				cracker_reg_dst(cj, rrRD, i);
-			else
+				cracker_reg_dst_wb(cj, rrRD);
+			} else
 				cracker_reg_src(cj, rrRD, i, 0);
 		} else
 			*dst++ = '.';
@@ -866,7 +887,7 @@ static int arm_step_group0_misc(cracker_ref cj)
 	}
 
 	switch(mlBFTST(IR, 27, 20) | mlBFTST(IR, 7, 4)) {
-		case 0x01200000:
+		case 0x01200000: return(arm_inst_msr(cj));
 		case 0x01200010: return(arm_inst_bx_blx_m(cj, 0));
 		case 0x01200030: return(arm_inst_bx_blx_m(cj, 1));
 //		case 0x01600000: return(arm_inst_msr_register(cj));

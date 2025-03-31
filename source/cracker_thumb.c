@@ -212,7 +212,7 @@ static int thumb_inst_bcc(cracker_ref cj)
 
 	const uint32_t new_pc = (THUMB1_PC + imm8);
 
-	itrace_start(cj, "B(0x%08x)", new_pc & 1);
+	itrace_start(cj, "B(0x%08x)", new_pc & ~1);
 	_itrace_end_with_comment(cj, "0x%08x + 0x%03x", THUMB_PC, imm8);
 
 	return(cracker_text_branch(cj, CCv, new_pc, THUMB1_IP_NEXT));
@@ -252,7 +252,7 @@ static int thumb_inst_bxx__bl_blx(cracker_ref cj, uint32_t eao, int blx)
 	const uint32_t new_lr = THUMB1_PC;
 
 	int splat = (new_pc == new_lr);
-	itrace(cj, "BL%s(0x%08x);", blx ? "X" : "", new_pc & ~1);
+	itrace(cj, "BL%s(0x%08x)", blx ? "X" : "", new_pc & ~1);
 	_itrace_end_with_comment(cj, "0x%08x + %s0x%08x, LR = 0x%08x",
 		PC, splat ? "x" : "", eao, new_lr & ~1);
 
@@ -404,10 +404,10 @@ static int thumb_inst_ldst_bwh_o_rn_rd(cracker_ref cj)
 	_itrace(cj, ")");
 
 	if(rR_IS_PC_REF(N)) {
-		_itrace_comment_start(cj, "[0x%08x]", pat);
+		_itrace_comment_start(cj, "[0x%08x:%u]", pat, size);
 
 		if(is_valid_read) {
-			_itrace_comment(cj, ":0x%08x", vR(D));
+			_itrace_comment(cj, " => 0x%08x", vR(D));
 		}
 
 		_itrace_comment_end(cj, 0);
@@ -478,10 +478,10 @@ static int thumb_inst_ldst_op_rm_rn_rd(cracker_ref cj)
 		rR_NAME(D), rR_NAME(N), rR_NAME(M));
 
 	if(rR_IS_PC_REF(N)) {
-		_itrace_comment_start(cj, "[0x%08x]", vR(EA));
+		_itrace_comment_start(cj, "[0x%08x:%u]", vR(EA), rR(EA));
 
 		if(is_valid_read) {
-			_itrace_comment(cj, ":0x%08x ", vR(D));
+			_itrace_comment(cj, " => 0x%08x ", vR(D));
 		}
 
 		_itrace_comment_end(cj, 0);
@@ -528,8 +528,9 @@ static int thumb_inst_ldst_rd_i(cracker_ref cj)
 		reg_name[rR(D)], rR_NAME(N), offset);
 
 	if(is_valid_read) {
-		_itrace_comment(cj, "[0x%08x]:0x%08x", ea, vR(D));
-	}
+		_itrace_comment(cj, "[0x%08x:4] => 0x%08x", ea, vR(D));
+	} else if(rR_IS_PC(N))
+		_itrace_comment(cj, "[0x%08x:4]", ea);
 
 	_itrace_end(cj, 0);
 
