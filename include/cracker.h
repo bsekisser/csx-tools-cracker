@@ -12,7 +12,7 @@ typedef struct cracker_t* cracker_p;
 
 /* **** */
 
-#include "queue.h"
+#include "libbse/include/queue.h"
 
 /* **** */
 

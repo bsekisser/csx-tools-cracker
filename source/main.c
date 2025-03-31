@@ -1,4 +1,3 @@
-#include "cracker_arm_ir.h"
 #include "cracker_data.h"
 #include "cracker_strings.h"
 #include "cracker_symbol.h"
@@ -8,10 +7,12 @@
 
 /* **** */
 
-#include "bitfield.h"
-#include "err_test.h"
-#include "log.h"
-#include "unused.h"
+#include "libarm/include/arm_ir.h"
+
+#include "libbse/include/bitfield.h"
+#include "libbse/include/err_test.h"
+#include "libbse/include/log.h"
+#include "libbse/include/unused.h"
 
 /* **** */
 
@@ -72,7 +73,7 @@ static symbol_p _scrounge_block__strings(cracker_p cj, uint32_t start, uint32_t 
 		if(cjs)
 			break;
 	}
-	
+
 	return(cjs);
 }
 
@@ -95,7 +96,7 @@ static int _scrounge_block__thumb(cracker_p cj, int safe) {
 					return(__scrounge_text_xxx(cj));
 				break;
 		}
-		
+
 		PC += sizeof(uint16_t);
 	}while(IR >>= 16);
 
@@ -135,7 +136,7 @@ static int _scrounge_block(cracker_p cj, uint32_t start, uint32_t end, int safe)
 static void _scrounge_pass_strings(cracker_p cj) {
 	/* scrounge pass */
 	symbol_p rhs = cj->symbol_qhead;
-	
+
 	do {
 		symbol_p lhs = rhs;
 		rhs = symbol_next(0, rhs);
@@ -146,7 +147,7 @@ static void _scrounge_pass_strings(cracker_p cj) {
 			if(0 < cracker_symbol_intergap(cj, lhs, rhs)) {
 				const uint32_t lhs_end_pat = 1 + lhs->end_pat;
 				const uint32_t rhs_pat = -1 + rhs->pat;
-				
+
 				symbol_p cjs = _scrounge_block__strings(cj, lhs_end_pat, rhs_pat);
 				if(cjs) {
 					LOG("lhs = 0x%08" PRIxPTR ", cjs = 0x%08" PRIxPTR ", rhs = 0x%08" PRIxPTR,
@@ -163,7 +164,7 @@ static void _scrounge_pass_strings(cracker_p cj) {
 static symbol_p _scrounge_pass(cracker_p cj, symbol_p cjs, int safe) {
 	/* scrounge pass */
 	symbol_p rhs = cjs ?: cj->symbol_qhead;
-	
+
 	do {
 		symbol_p lhs = rhs;
 		rhs = symbol_next(0, rhs);
@@ -174,7 +175,7 @@ static symbol_p _scrounge_pass(cracker_p cj, symbol_p cjs, int safe) {
 			if(0 < cracker_symbol_intergap(cj, lhs, rhs)) {
 				const uint32_t lhs_end_pat = 1 + lhs->end_pat;
 				const uint32_t rhs_pat = -1 + rhs->pat;
-				
+
 				if(_scrounge_block(cj, lhs_end_pat, rhs_pat, safe))
 					continue;
 			}
@@ -205,7 +206,7 @@ static void load_content(cracker_content_p content, const char* file_name)
 
 	content->data = data;
 	content->data_limit = data + sb.st_size;
-	
+
 	content->base = 0x10020000;
 	content->size = sb.st_size;
 	content->end = content->base + content->size;
@@ -237,20 +238,20 @@ int main(void)
 			0x0000b114, 0x0000c0c0, 0x0000f780, 0x0000f794,
 			0x00010a14, 0x00010a2c, 0x00010a48, 0x00010eb4,
 			0x00012190, 0x000121a4, 0x000121a8, 0x000121bc,
-			
+
 			0x0001597b, 0x00015982,
-			
+
 			0x000159d8, 0x000159f0,	0x00015a08, 0x00015a1c,
 			0x00015a2d,
 
 			0x00015ae4,
-			
+
 			0x00015ccc, 0x00015ce0, 0x00015cf4, 0x00015d08,
 			0x00015d1c, 0x00015d30, 0x00015d44,	0x00015d58,
 			0x00015d6c, 0x00015d80, 0x00015d94,
-			
+
 			0x00015dbc,	0x00015dd0,
-			
+
 			0x00015e38, 0x00015e48,
 			0x00015e5c, 0x00015e70, 0x00015e88, 0x00015f04,
 			0x00015f1c, 0x00015f68, 0x00015f78, 0x00015f7c,
@@ -259,15 +260,15 @@ int main(void)
 			0x000175bc, 0x0001ac04, 0x0001afa8, 0x0001afbc,
 			0x0001cef8, 0x0001cf0c, 0x0001df38, 0x0001df50,
 			0x0001df6c, 0x0001e3d8,
-			
+
 			0x0001f40c, 0x0001f420,
 			0x0001f424, 0x0001f438,
-			
+
 			0x00022cc4, 0x00022cdc, 0x00022cf4, 0x00022d08,
 			0x00022d19,
-			
+
 			0x00022d25, 0x00022d39,
-			
+
 			0x00022f4c, 0x00022f60, 0x00022f74,	0x00022f88,
 			0x00022f9c, 0x00022fb0, 0x00022fc4,	0x00022fd8,
 			0x00022fec, 0x00023000, 0x00023014,	0x00023028,
@@ -286,11 +287,11 @@ int main(void)
 
 			0,
 		};
-		
+
 		for(unsigned i = 0; string_table[i]; i++)
 			cracker_data_string_rel(cj, string_table[i]);
 	}
-	
+
 	uint32_t src = cj->content.end;
 	do {
 		IR = cracker_read(cj, src, sizeof(uint32_t));
@@ -310,7 +311,7 @@ int main(void)
 
 		src--;
 	} while(src > cj->content.base);
-	
+
 	PC = cj->content.base;
 	IR = cracker_read(cj, PC, sizeof(uint32_t));
 	PC += sizeof(uint32_t);
@@ -333,9 +334,9 @@ int main(void)
 //	for(cj->symbol_pass = 1; cj->symbol_pass <= 3; cj->symbol_pass++)
 	{
 		cracker_pass(cj, 0);
-		
+
 		if(0 == cj->symbol_count.added) {
-			cjs = _scrounge_pass(cj, cjs, safe);
+//			cjs = _scrounge_pass(cj, cjs, safe);
 			safe = 0;
 		} else
 			cjs = 0;

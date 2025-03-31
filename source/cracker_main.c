@@ -10,11 +10,11 @@
 
 /* **** */
 
-#include "bitfield.h"
-#include "err_test.h"
-#include "log.h"
-#include "shift_roll.h"
-#include "unused.h"
+#include "libbse/include/bitfield.h"
+#include "libbse/include/err_test.h"
+#include "libbse/include/log.h"
+#include "libbse/include/shift_roll.h"
+#include "libbse/include/unused.h"
 
 /* **** */
 
@@ -140,7 +140,7 @@ void cracker_pass(cracker_p cj, int trace)
 		pass_symbol_count++;
 	}
 
-	const unsigned symbol_count = 
+	const unsigned symbol_count =
 		cj->symbol_count.data
 		+ cj->symbol_count.string
 		+ cj->symbol_count.text;
@@ -180,7 +180,7 @@ int cracker_pat_out_of_bounds(cracker_p cj, uint32_t pat, size_t size)
 {
 	if(pat < cj->content.base)
 		return(1);
-	
+
 	if(pat > (cj->content.end - size))
 		return(1);
 
@@ -228,7 +228,7 @@ int cracker_pat_src_limit_if(cracker_p cj, uint32_t pat, uint8_t** src_start, ui
 uint32_t cracker_read(cracker_p cj, uint32_t pat, size_t size)
 {
 	uint32_t data = 0;
-	
+
 	cracker_read_if(cj, pat, size, &data);
 	return(data);
 }
@@ -255,10 +255,10 @@ void cracker_relocation_step(cracker_p cj, uint32_t pat)
 	const uint32_t saved_symbol_text_mod = cj->symbol_text_mod;
 
 	BSET(cj->symbol_text_mod, SYMBOL_TEXT_XXX);
-	
+
 	PC = pat;
 	cracker_step(cj);
-	
+
 	PC = savedPC;
 	cj->symbol_text_mod = saved_symbol_text_mod;
 }
@@ -267,11 +267,11 @@ void cracker_relocation(cracker_p cj, uint32_t pat)
 {
 	const void* src_start = cj->content.data;
 	const void* src_limit = cj->content.data_limit;
-	
+
 	uint8_t* src = (void*)src_start;
 
 	uint32_t pat_test = pat;
-	
+
 	if(0x05000000 == (IR & 0x0f000001)) {
 		pat_test = mlBFEXT(pat, 23, 0);
 	} else if(0xf000e800 == (IR & 0xf800e800)) {
@@ -296,7 +296,7 @@ void cracker_relocation(cracker_p cj, uint32_t pat)
 			if(cj->collect_refs) {
 				uint32_t data = cracker_read(cj, pa, sizeof(uint32_t));
 				cracker_relocation_step(cj, pa - (1 << 4));
-				
+
 				LOG("0x%08x(0x%08x)", pa, data);
 				fprintf(stderr, ", 0x%08x(0x%08x)", pa, data);
 			}

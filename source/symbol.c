@@ -2,8 +2,8 @@
 
 /* **** */
 
-#include "bitfield.h"
-#include "queue.h"
+#include "libbse/include/bitfield.h"
+#include "libbse/include/queue.h"
 
 /* **** */
 
@@ -35,7 +35,7 @@ void symbol_enqueue(symbol_h h2sqh, symbol_p lhs, symbol_p cjs)
 symbol_p symbol_find_pat(symbol_h h2sqh, symbol_h h2lhs, uint32_t pat, uint32_t mask)
 {
 	assert(0 != h2sqh);
-	
+
 	symbol_p rhs = *h2sqh;
 
 	const uint32_t masked_pat = pat & mask;
@@ -58,7 +58,7 @@ symbol_p symbol_find_pat(symbol_h h2sqh, symbol_h h2lhs, uint32_t pat, uint32_t 
 symbol_p symbol_new(uint32_t pat, size_t size, unsigned type)
 {
 	const symbol_p cjs = calloc(1, sizeof(symbol_t));
-	
+
 	cjs->pat = pat;
 	BSET(cjs->size, size);
 	BSET(cjs->type, type);

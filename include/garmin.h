@@ -1,6 +1,6 @@
 #pragma once
 
-#define LOCAL_RGNDIR "../../../garmin/rgn_files/"
+#define LOCAL_RGNDIR "git/garmin/rgn_files/"
 
 //#define RGNFileName "029201000350"
 #define RGNFileName "038201000610"

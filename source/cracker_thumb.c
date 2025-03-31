@@ -8,9 +8,7 @@
 
 /* **** */
 
-#include "cracker_arm_ir.h"
 #include "cracker_data.h"
-#include "cracker_disasm.h"
 #include "cracker_enum.h"
 #include "cracker_strings.h"
 #include "cracker_thumb.h"
@@ -19,9 +17,12 @@
 
 /* **** */
 
-#include "bitfield.h"
-#include "log.h"
-#include "shift_roll.h"
+#include "libarm/include/arm_disasm.h"
+#include "libarm/include/arm_ir.h"
+
+#include "libbse/include/bitfield.h"
+#include "libbse/include/log.h"
+#include "libbse/include/shift_roll.h"
 
 /* **** */
 
@@ -344,7 +345,7 @@ static int thumb_inst_dpr_rms_rdn(cracker_p cj)
 		"&", "^", "<<", ">>", ">>>", "+", "-", ">><<",
 		"&", "-",  "-",  "-",   "|", "*", "&", "~" };
 	const char* dpr_opcs = _dpr_opcs[operation];
-	
+
 	switch(aluop) {
 		case ARM_MVN:
 		case THUMB_NEG:
@@ -429,7 +430,7 @@ static int thumb_inst_ldst_op_rm_rn_rd(cracker_p cj)
 	 * 0x5a00 -- LDRH  -- 0101 101m mmnn nddd
 	 * 0x5c00 -- LDRB  -- 0101 110m mmnn nddd
 	 */
-	
+
 //	const int opcode mlBFEXT(IR, 11, 9);
 	const int flag_s = (3 == mlBFEXT(IR, 10, 9));
 	const int bit_b = flag_s ? !BEXT(IR, 11) : BEXT(IR, 10);
@@ -482,7 +483,7 @@ static int thumb_inst_ldst_op_rm_rn_rd(cracker_p cj)
 
 	if(rR_IS_PC_REF(N)) {
 		_CORE_TRACE_("; /* [0x%08x]", vR(EA));
-		
+
 		if(is_valid_read) {
 			_CORE_TRACE_(":0x%08x ", vR(D));
 		}
@@ -728,7 +729,7 @@ static int thumb_step__fail_decode(cracker_p cj, int crap)
 	if(0 && crap)
 		LOG_ACTION(exit(-1));
 
-	cracker_disasm_thumb(cj, IP, IR);
+	arm_disasm_thumb(IP, IR);
 	return(0);
 }
 

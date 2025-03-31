@@ -6,7 +6,7 @@
 
 /* **** */
 
-#include "bitfield.h"
+#include "libbse/include/bitfield.h"
 
 /* **** */
 
@@ -23,7 +23,7 @@ static uint8_t* _skip(uint8_t* src_start, uint8_t* src_limit, int (*test)(int))
 {
 	if(!src_start || !src_limit)
 		return(0);
-	
+
 	uint8_t* src = (uint8_t*)src_start;
 	for(; src < src_limit; src++) {
 		uint8_t c = *src;
@@ -70,14 +70,14 @@ uint32_t cracker_data_ptr_read(cracker_p cj, uint32_t pat, size_t size)
 	uint32_t data_pat = 0;
 	if(cracker_data_read_if(cj, pat, sizeof(uint32_t), &data_pat))
 		return(cracker_data_read(cj, data_pat, size));
-	
+
 	return(0);
 }
 
 uint32_t cracker_data_read(cracker_p cj, uint32_t pat, size_t size)
 {
 	uint32_t data = 0;
-	
+
 	cracker_data_read_if(cj, pat, size, &data);
 	return(data);
 }

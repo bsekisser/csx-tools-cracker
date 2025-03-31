@@ -2,7 +2,7 @@
 
 /* **** */
 
-#include "queue.h"
+#include "libbse/include/queue.h"
 
 /* **** */
 
