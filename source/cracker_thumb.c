@@ -58,21 +58,17 @@ static int thumb_inst_add_rd_pcsp_i(cracker_ref cj)
 		cracker_reg_dst_wb(cj, rrRD);
 	}
 
-	CORE_TRACE_START();
+	itrace_start(cj, "%s(%s, %s", imm8 ? "ADD" : "MOV", rR_NAME(D), rR_NAME(N));
 
-	_CORE_TRACE_("%s(%s, %s", imm8 ? "ADD" : "MOV", rR_NAME(D), rR_NAME(N));
+	if(imm8)
+		_itrace(cj, ", 0x%03x", imm8);
 
-	if(imm8) {
-		_CORE_TRACE_(", 0x%03x", imm8);
-	}
+	_itrace(cj, ")");
 
-	_CORE_TRACE_(")");
+	if(rR_IS_PC(N))
+		_itrace_comment(cj, "0x%08x", vR(D));
 
-	if(rR_IS_PC(N)) {
-		_CORE_TRACE_("; /* 0x%08x */", vR(D));
-	}
-
-	CORE_TRACE_END();
+	_itrace_end(cj, 0);
 
 	return(1);
 }
@@ -107,25 +103,25 @@ static int thumb_inst_add_sub_rn_rd(cracker_ref cj)
 	if(alubox(&vR(D), aluop[op2], vR(N), vR(M)))
 		cracker_reg_dst_wb(cj, rrRD);
 
-	CORE_TRACE_START("%s(%s, %s, ", ops[op2], reg_name[rR(D)],
+	itrace_start(cj, "%s(%s, %s, ", ops[op2], reg_name[rR(D)],
 		rR_NAME(N));
 
 	if(bit_i) {
-		_CORE_TRACE_("0x%01x", vR(M));
+		_itrace(cj, "0x%01x", vR(M));
 	} else {
-		_CORE_TRACE_("%s", reg_name[rR(M)]);
+		_itrace(cj, "%s", reg_name[rR(M)]);
 	}
 
-	_CORE_TRACE_(")");
+	_itrace(cj, ")");
 
 //	if(rR_IS_PC_REF(N) && bit_i && vR(M)) {
 		const char aluopc[2] = { '+', '-' };
 
-		_CORE_TRACE_("; /* 0x%08x %c 0x%08x = 0x%08x */",
+		_itrace_comment(cj, "0x%08x %c 0x%08x = 0x%08x",
 			vR(N), aluopc[op2], vR(M), vR(D));
 //	}
 
-	CORE_TRACE_END();
+	_itrace_end(cj, 0);
 
 	return(1);
 }
@@ -135,7 +131,7 @@ static int thumb_inst_add_sub_sp_i(cracker_ref cj)
 	const uint16_t imm7 = mlBFMOV(IR, 6, 0, 2);
 	const int is_sub = BEXT(IR, 7);
 
-	CORE_TRACE("%s(SP, 0x%03x)", is_sub ? "SUB" : "ADD", imm7);
+	itrace(cj, "%s(SP, 0x%03x)", is_sub ? "SUB" : "ADD", imm7);
 
 	return(1);
 }
@@ -171,7 +167,7 @@ static int thumb_inst_ascm_i(cracker_ref cj)
 	if(alubox(&vR(D), aluop[op], vR(N), imm8))
 		cracker_reg_dst_wb(cj, rrRD);
 
-	CORE_TRACE_START("%s(%s, 0x%02x)",
+	itrace_start(cj, "%s(%s, 0x%02x)",
 		opname[op], reg_name[rR(N)], imm8);
 
 	const char opc[4] = { '=', '-', '+', '-' };
@@ -180,19 +176,19 @@ static int thumb_inst_ascm_i(cracker_ref cj)
 		case THUMB_ASCM_ADD:
 		case THUMB_ASCM_CMP:
 		case THUMB_ASCM_SUB:
-			_CORE_TRACE_("; /* 0x%08x %c 0x%02x = 0x%08x */",
+			_itrace_comment(cj, "0x%08x %c 0x%02x = 0x%08x",
 				vR(N), opc[op], imm8, vR(D));
 			break;
 		case THUMB_ASCM_MOV:
 			break;
 		default:
-			CORE_TRACE("ASCM_OP = 0x%02x", op);
+			itrace(cj, "ASCM_OP = 0x%02x", op);
 			return(0);
 			LOG_ACTION(exit(-1));
 			break;
 	}
 
-	CORE_TRACE_END();
+	_itrace_end(cj, 0);
 
 	return(1);
 }
@@ -202,7 +198,8 @@ static int thumb_inst_b(cracker_ref cj)
 	const int32_t eao = mlBFMOVs(IR, 10, 0, 1);
 	const uint32_t new_pc = THUMB1_PC + eao;
 
-	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x */", new_pc & ~1, THUMB_PC, eao);
+	itrace_start(cj, "B(0x%08x)", new_pc & ~1);
+	_itrace_end_with_comment(cj, "0x%08x + 0x%03x", THUMB_PC, eao);
 
 	return(cracker_text_branch(cj, CC_AL, new_pc, 0));
 }
@@ -215,7 +212,8 @@ static int thumb_inst_bcc(cracker_ref cj)
 
 	const uint32_t new_pc = (THUMB1_PC + imm8);
 
-	CORE_TRACE("B(0x%08x); /* 0x%08x + 0x%03x */", new_pc & ~1, THUMB_PC, imm8);
+	itrace_start(cj, "B(0x%08x)", new_pc & 1);
+	_itrace_end_with_comment(cj, "0x%08x + 0x%03x", THUMB_PC, imm8);
 
 	return(cracker_text_branch(cj, CCv, new_pc, THUMB1_IP_NEXT));
 }
@@ -226,16 +224,14 @@ static int thumb_inst_bx_blx(cracker_ref cj)
 
 	setup_rR_vR_src(M, mlBFEXT(IR, 6, 3));
 
-	CORE_TRACE_START();
-
-	_CORE_TRACE_("B%sX(%s)", link ? "L" : "", rR_NAME(M));
+	itrace_start(cj, "B%sX(%s)", link ? "L" : "", rR_NAME(M));
 
 	if(rR_IS_PC_REF(M)) {
 		const int thumb = vR(M) & 1;
-		_CORE_TRACE_("; /* %c(0x%08x) */", thumb ? 'T' : 'A', vR(M));
+		_itrace_comment(cj, "%c(0x%08x)", thumb ? 'T' : 'A', vR(M));
 	}
 
-	CORE_TRACE_END();
+	_itrace_end(cj, 0);
 
 	if(link)
 		cracker_text_branch_link(cj, CC_AL, THUMB1_IP_NEXT);
@@ -256,8 +252,9 @@ static int thumb_inst_bxx__bl_blx(cracker_ref cj, uint32_t eao, int blx)
 	const uint32_t new_lr = THUMB1_PC;
 
 	int splat = (new_pc == new_lr);
-	CORE_TRACE("BL%s(0x%08x); /* 0x%08x + %s0x%08x, LR = 0x%08x */",
-		blx ? "X" : "", new_pc & ~1, PC, splat ? "x" : "", eao, new_lr & ~1);
+	itrace(cj, "BL%s(0x%08x);", blx ? "X" : "", new_pc & ~1);
+	_itrace_end_with_comment(cj, "0x%08x + %s0x%08x, LR = 0x%08x",
+		PC, splat ? "x" : "", eao, new_lr & ~1);
 
 	if(splat)
 		cracker_relocation(cj, IP);
@@ -304,7 +301,9 @@ static int thumb_inst_bxx_prefix(cracker_ref cj)
 	}
 
 return_not_prefix_suffix:
-	CORE_TRACE("BL/BLX(0x%08x) /* LR = 0x%08x */", eao_prefix, LR);
+	itrace(cj, "BL/BLX(0x%08x)", eao_prefix);
+	_itrace_end_with_comment(cj, "LR = 0x%08x", LR);
+
 	return(0);
 }
 
@@ -339,7 +338,7 @@ static int thumb_inst_dpr_rms_rdn(cracker_ref cj)
 	if(alubox(&vR(D), aluop, vR(N), vR(M)))
 		cracker_reg_dst_wb(cj, rrRD);
 
-	CORE_TRACE_START("%s(%s, %s)", dpr_ops, rR_NAME(D), rR_NAME(M));
+	itrace_start(cj, "%s(%s, %s)", dpr_ops, rR_NAME(D), rR_NAME(M));
 
 	const char* _dpr_opcs[16] = {
 		"&", "^", "<<", ">>", ">>>", "+", "-", ">><<",
@@ -347,22 +346,21 @@ static int thumb_inst_dpr_rms_rdn(cracker_ref cj)
 	const char* dpr_opcs = _dpr_opcs[operation];
 
 	switch(aluop) {
+		case ARM_BIC:
+			_itrace_end_with_comment(cj, "0x%08x %s ~0x%08x = 0x%08x",
+				vR(N), dpr_opcs, vR(M), vR(D));
+			break;
 		case ARM_MVN:
 		case THUMB_NEG:
-			_CORE_TRACE_("; /* %s0x%08x = 0x%08x */",
+			_itrace_end_with_comment(cj, "%s0x%08x = 0x%08x",
 				dpr_opcs, vR(M), vR(D));
 			break;
 		default:
-			_CORE_TRACE_("; /* 0x%08x %s 0x%08x = 0x%08x */",
-				vR(N), dpr_opcs, vR(M), vR(D));
-			break;
-		case ARM_BIC:
-			_CORE_TRACE_("; /* 0x%08x %s ~0x%08x = 0x%08x */",
+			_itrace_end_with_comment(cj, "0x%08x %s 0x%08x = 0x%08x",
 				vR(N), dpr_opcs, vR(M), vR(D));
 			break;
 	}
 
-	CORE_TRACE_END();
 	return(1);
 }
 
@@ -396,28 +394,26 @@ static int thumb_inst_ldst_bwh_o_rn_rd(cracker_ref cj)
 
 	const char* bwh = (bit_h ? "H" : (bit_b ? "B" : ""));
 
-	CORE_TRACE_START();
-
-	_CORE_TRACE_("%sR%s(%s, %s", bit_l ? "LD" : "ST", bwh,
+	itrace_start(cj, "%sR%s(%s, %s", bit_l ? "LD" : "ST", bwh,
 		rR_NAME(D), rR_NAME(N));
 
 	if(imm5) {
-		_CORE_TRACE_(", 0x%03x", offset);
+		_itrace(cj, ", 0x%03x", offset);
 	}
 
-	_CORE_TRACE_(")");
+	_itrace(cj, ")");
 
 	if(rR_IS_PC_REF(N)) {
-		_CORE_TRACE_("; /* [0x%08x]", pat);
+		_itrace_comment_start(cj, "[0x%08x]", pat);
 
 		if(is_valid_read) {
-			_CORE_TRACE_(":0x%08x", vR(D));
+			_itrace_comment(cj, ":0x%08x", vR(D));
 		}
 
-		_CORE_TRACE_(" */");
+		_itrace_comment_end(cj, 0);
 	}
 
-	CORE_TRACE_END();
+	_itrace_end(cj, 0);
 
 	return(1);
 }
@@ -477,21 +473,21 @@ static int thumb_inst_ldst_op_rm_rn_rd(cracker_ref cj)
 
 	const char* bwh = (bit_h ? "H" : (bit_b ? "B" : ""));
 
-	CORE_TRACE_START("%sR%s%s(%s, %s, %s)", bit_l ? "LD" : "ST", bwh,
+	itrace_start(cj, "%sR%s%s(%s, %s, %s)", bit_l ? "LD" : "ST", bwh,
 		flag_s ? "S" : "",
 		rR_NAME(D), rR_NAME(N), rR_NAME(M));
 
 	if(rR_IS_PC_REF(N)) {
-		_CORE_TRACE_("; /* [0x%08x]", vR(EA));
+		_itrace_comment_start(cj, "[0x%08x]", vR(EA));
 
 		if(is_valid_read) {
-			_CORE_TRACE_(":0x%08x ", vR(D));
+			_itrace_comment(cj, ":0x%08x ", vR(D));
 		}
 
-		_CORE_TRACE_("*/");
+		_itrace_comment_end(cj, 0);
 	}
 
-	CORE_TRACE_END();
+	_itrace_end(cj, 0);
 
 	return(1);
 }
@@ -509,7 +505,7 @@ static int thumb_inst_ldst_rd_i(cracker_ref cj)
 			setup_rR_vR(N, rSP, 0);
 			break;
 		default:
-			CORE_TRACE();
+			itrace(cj, 0);
 			LOG_ACTION(exit(-1));
 			break;
 	}
@@ -528,14 +524,14 @@ static int thumb_inst_ldst_rd_i(cracker_ref cj)
 	} else
 		setup_rR_src(D, mlBFEXT(IR, 10, 8));
 
-	CORE_TRACE_START("%sR(%s, %s, 0x%04x)", bit_l ? "LD" : "ST",
+	itrace_start(cj, "%sR(%s, %s, 0x%04x)", bit_l ? "LD" : "ST",
 		reg_name[rR(D)], rR_NAME(N), offset);
 
 	if(is_valid_read) {
-		_CORE_TRACE_("; /* [0x%08x]:0x%08x */", ea, vR(D));
+		_itrace_comment(cj, "[0x%08x]:0x%08x", ea, vR(D));
 	}
 
-	CORE_TRACE_END();
+	_itrace_end(cj, 0);
 
 	return(1);
 }
@@ -560,7 +556,7 @@ static int thumb_inst_ldstm(cracker_ref cj)
 	}
 	*dst = 0;
 
-	CORE_TRACE("%sMIA(%s.WB, {%s})", bit_l ? "LD" : "ST",
+	itrace(cj, "%sMIA(%s.WB, {%s})", bit_l ? "LD" : "ST",
 		rR_NAME(N), reglist);
 
 	return(1);
@@ -586,7 +582,7 @@ static int thumb_inst_pop_push(cracker_ref cj)
 	*dst = 0;
 
 	const char *pclrs = bit_r ? (bit_l ? ", PC" : ", LR") : "";
-	CORE_TRACE("%s(rSP, r{%s%s});", bit_l ? "POP" : "PUSH", reglist, pclrs);
+	itrace(cj, "%s(rSP, r{%s%s})", bit_l ? "POP" : "PUSH", reglist, pclrs);
 
 	return(!(bit_r && bit_l));
 }
@@ -626,25 +622,25 @@ static int thumb_inst_sdp_rms_rdn(cracker_ref cj)
 	if(alubox(&vR(D), aluop[operation], vR(N), vR(M)))
 		cracker_reg_dst_wb(cj, rrRD);
 
-	CORE_TRACE_START("%s(%s, %s", sos, rR_NAME(D),
+	itrace_start(cj, "%s(%s, %s)", sos, rR_NAME(D),
 		rR_NAME(M));
 
 	switch(operation) {
 		case 0x02: /* mov */
 			if(rR_IS_PC(M) || rR_IS_PC_REF(M)) {
-				_CORE_TRACE_("); /* 0x%08x */", vR(M));
+				_itrace_comment(cj, "0x%08x", vR(M));
 			}
 			break;
 		default:
 			if((rR_IS_PC(M) || rR_IS_PC_REF(M))
 				|| (rR_IS_PC(N) || rR_IS_PC_REF(N))) {
-					_CORE_TRACE_("); /* 0x%08x %c 0x%08x == 0x%08x */",
+					_itrace_comment(cj, "0x%08x %c 0x%08x == 0x%08x",
 						vR(N), ((operation & 1) ? '-' : '+'), vR(M), vR(D));
 				}
 			break;
 	}
 
-	CORE_TRACE_END();
+	_itrace_end(cj, 0);
 
 	return(!rR_IS_PC(D));
 }
@@ -673,7 +669,7 @@ static int thumb_inst_shift_i(cracker_ref cj)
 //		case SOP_ROR: // !! invalid !!
 			break;
 		default:
-			CORE_TRACE("SHIFT_I_OP = 0x%02x", sop);
+			itrace(cj, "SHIFT_I_OP = 0x%02x", sop);
 			LOG_ACTION(exit(-1));
 			break;
 	}
@@ -692,14 +688,12 @@ static int thumb_inst_shift_i(cracker_ref cj)
 
 	cracker_reg_dst_wb(cj, rrRD);
 
-	CORE_TRACE_START("%s(%s, %s, %01u)",
+	itrace_start(cj, "%s(%s, %s, %01u)",
 		shift_op_string[sop], rR_NAME(D),
 		rR_NAME(M), vR(S));
 
-	_CORE_TRACE_("; /* %s(0x%08x, 0x%08x) == 0x%08x */",
+	_itrace_end_with_comment(cj, "%s(0x%08x, 0x%08x) == 0x%08x",
 		shift_op_string[sop], vR(M), vR(S), vR(D));
-
-	CORE_TRACE_END();
 
 	return(1);
 }
@@ -712,14 +706,14 @@ static int thumb_step__fail_decode(cracker_ref cj, int crap)
 {
 	for(uint8_t lsb = 13; lsb > 8; lsb--) {
 		uint32_t opcode = mlBFTST(IR, 15, lsb);
-		CORE_TRACE("IR[[15:%01u]:0] = 0x%04x", lsb, opcode);
+		itrace(cj, "IR[[15:%01u]:0] = 0x%04x", lsb, opcode);
 
 		switch(opcode) {
 			case 0xe000:
 				lsb = 11;
 				break;
 			case 0xf800:
-				CORE_TRACE("BL/BLX: H[IR[12:11]] = %01u", mlBFEXT(IR, 12, 11));
+				itrace(cj, "BL/BLX: H[IR[12:11]] = %01u", mlBFEXT(IR, 12, 11));
 				break;
 			default:
 				break;
@@ -782,7 +776,7 @@ static int thumb_step_group5_b000_bfff(cracker_ref cj)
 		case 0xbd00: /* 1011 1101 xxxx xxxx */
 			return(thumb_inst_pop_push(cj));
 		case 0xbe00: /* 1011 1110 xxxx xxxx */
-			CORE_TRACE("bkpt 0x%02x", IR & 0xff);
+			itrace(cj, "bkpt 0x%02x", IR & 0xff);
 			return(1);
 	}
 

@@ -349,7 +349,7 @@ int main(void)
 
 	cracker_pass(cj, 0);
 
-	CORE_TRACE("/* **** **** **** **** */");
+	LOG("/* **** **** **** **** */");
 
 	printf("\n\n/* **** **** **** **** */\n\n");
 

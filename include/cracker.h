@@ -85,8 +85,10 @@ typedef struct cracker_core_tag {
 	union {
 		unsigned _flags;
 		struct {
-			unsigned trace:1;
-		};
+			unsigned enabled:1;
+			unsigned comment:1;
+			unsigned started:1;
+		}trace;
 	};
 }cracker_core_t;
 
@@ -124,12 +126,8 @@ typedef struct cracker_tag {
 //		unsigned _flags;
 		struct {
 			unsigned collect_refs:1;
+			unsigned trace:1;
 		};
-		struct {
-			unsigned comment:1;
-			unsigned enabled:1;
-			unsigned started:1;
-		}trace;
 	};
 }cracker_t;
 

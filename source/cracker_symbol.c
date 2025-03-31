@@ -179,7 +179,7 @@ int32_t cracker_symbol_intergap(cracker_ref cj, symbol_ref lhs, symbol_ref rhs)
 
 void cracker_symbol_log(cracker_ref cj, symbol_ref cjs)
 {
-	if(0 == cj->core.trace)
+	if(0 == cj->core.trace.enabled)
 		return;
 
 	assert(0 != cjs);
@@ -198,7 +198,7 @@ void cracker_symbol_log(cracker_ref cj, symbol_ref cjs)
 void cracker_symbol_queue_log(cracker_ref cj, symbol_ref sqh)
 {
 	cj->collect_refs = 0;
-	cj->core.trace = 1;
+	cj->core.trace.enabled = 1;
 
 	symbol_ptr cjs = sqh;
 

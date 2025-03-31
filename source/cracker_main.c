@@ -126,7 +126,7 @@ void cracker_pass(cracker_ref cj, int trace)
 	printf("\n\n/* pass %u **** **** **** **** */\n\n", cj->symbol_pass);
 
 	cracker_clear(cj);
-	cj->core.trace = !!trace;
+	cj->core.trace.enabled = !!trace;
 	cj->symbol_count.added = 0;
 
 	unsigned pass_symbol_count = 0;
