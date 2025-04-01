@@ -162,6 +162,8 @@ symbol_ptr cracker_symbol_find(cracker_ref cj, symbol_href h2lhs, uint32_t pat, 
 
 int32_t cracker_symbol_intergap(cracker_ref cj, symbol_ref lhs, symbol_ref rhs)
 {
+	if(!lhs || !rhs) return(0);
+
 	const uint32_t pat_bump = 3 >> lhs->thumb;
 	const uint32_t pat_mask = ~pat_bump;
 
@@ -200,25 +202,20 @@ void cracker_symbol_queue_log(cracker_ref cj, symbol_ref sqh)
 	cj->collect_refs = 0;
 	cj->core.trace.enabled = 1;
 
-	symbol_ptr cjs = sqh;
+	symbol_ptr cjs = 0, lhs = 0;
 
-	do {
+	while(symbol_next(sqh, &lhs, &cjs, 0)) {
 		cracker_symbol_log(cj, cjs);
 
-		symbol_ref lhs = cjs;
-		cjs = symbol_next(0, cjs);
+		const size_t byte_count = cracker_symbol_intergap(cj, lhs, cjs);
+		if(byte_count) {
+			const uint32_t cjs_pat = cjs->pat & ~(3 >> cjs->thumb);
 
-		if(cjs) {
-			const size_t byte_count = cracker_symbol_intergap(cj, lhs, cjs);
-			if(byte_count) {
-				const uint32_t cjs_pat = cjs->pat & ~(3 >> cjs->thumb);
-
-				LOG("0x%08x -- 0x%08x === 0x%08x", lhs->end_pat, cjs_pat, byte_count);
-				cracker_dump_hex(cj, 1 + lhs->end_pat, -1 + cjs_pat);
-				printf("\n");
-			}
+			LOG("0x%08x -- 0x%08x === 0x%08x", lhs->end_pat, cjs_pat, byte_count);
+			cracker_dump_hex(cj, 1 + lhs->end_pat, -1 + cjs_pat);
+			printf("\n");
 		}
-	}while(cjs);
+	}
 }
 
 int cracker_symbol_step(cracker_ref cj, symbol_ref cjs)

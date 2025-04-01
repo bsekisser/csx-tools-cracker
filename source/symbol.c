@@ -13,6 +13,17 @@
 
 /* **** */
 
+static
+symbol_ptr __symbol_next(symbol_ref sqh, symbol_href h2lhs, symbol_ref cjs, symbol_href h2cjs)
+{
+	symbol_ref next = cjs ? (symbol_ptr)cjs->qelem.next : sqh;
+
+	if(h2lhs) *h2lhs = cjs;
+	if(h2cjs) *h2cjs = next;
+
+	return(next);
+}
+
 void symbol_enqueue(symbol_href h2sqh, symbol_ref lhs, symbol_ref cjs)
 {
 	symbol_ref sqh = *h2sqh;
@@ -66,12 +77,10 @@ symbol_ptr symbol_new(uint32_t pat, size_t size, unsigned type)
 	return(cjs);
 }
 
-symbol_ptr symbol_next(symbol_href h2lhs, symbol_ref cjs)
+symbol_ptr symbol_next(symbol_ref sqh, symbol_href h2lhs, symbol_href h2cjs, symbol_href h2rhs)
 {
-	assert(0 != cjs);
+	symbol_ref next = __symbol_next(sqh, h2lhs, *h2cjs, h2cjs);
+	__symbol_next(0, 0, next, h2rhs);
 
-	if(h2lhs)
-		*h2lhs = cjs;
-
-	return((symbol_ptr)cjs->qelem.next);
+	return(next);
 }

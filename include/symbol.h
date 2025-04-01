@@ -46,4 +46,4 @@ typedef struct symbol_tag {
 void symbol_enqueue(symbol_href h2sqh, symbol_ref lhs, symbol_ref cjs);
 symbol_ptr symbol_find_pat(symbol_href h2sqh, symbol_href h2lhs, uint32_t pat, uint32_t mask);
 symbol_ptr symbol_new(uint32_t pat, size_t size, unsigned type);
-symbol_ptr symbol_next(symbol_href h2lhs, symbol_ref cjs);
+symbol_ptr symbol_next(symbol_ref sqh, symbol_href h2lhs, symbol_href h2cjs, symbol_href h2rhs);

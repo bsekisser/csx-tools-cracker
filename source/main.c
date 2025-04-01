@@ -135,52 +135,37 @@ static int _scrounge_block(cracker_ref cj, uint32_t start, uint32_t end, int saf
 
 static void _scrounge_pass_strings(cracker_ref cj) {
 	/* scrounge pass */
-	symbol_ptr rhs = cj->symbol_qhead;
+	symbol_ptr cjs = 0, lhs = 0, rhs = 0;
 
-	do {
-		symbol_ref lhs = rhs;
-		rhs = symbol_next(0, rhs);
+	while(symbol_next(cj->symbol_qhead, &lhs, &cjs, &rhs)) {
+		if(0 < cracker_symbol_intergap(cj, lhs, cjs)) {
+			const uint32_t lhs_end_pat = 1 + lhs->end_pat;
+			const uint32_t cjs_pat = -1 + cjs->pat;
 
-		assert(lhs != rhs);
+			symbol_ptr cjs = _scrounge_block__strings(cj, lhs_end_pat, cjs_pat);
+			if(cjs) {
+				LOG("lhs = 0x%08" PRIxPTR ", cjs = 0x%08" PRIxPTR ", rhs = 0x%08" PRIxPTR,
+					(uintptr_t)lhs, (uintptr_t)cjs, (uintptr_t)rhs);
 
-		if(rhs) {
-			if(0 < cracker_symbol_intergap(cj, lhs, rhs)) {
-				const uint32_t lhs_end_pat = 1 + lhs->end_pat;
-				const uint32_t rhs_pat = -1 + rhs->pat;
-
-				symbol_ptr cjs = _scrounge_block__strings(cj, lhs_end_pat, rhs_pat);
-				if(cjs) {
-					LOG("lhs = 0x%08" PRIxPTR ", cjs = 0x%08" PRIxPTR ", rhs = 0x%08" PRIxPTR,
-						(uintptr_t)lhs, (uintptr_t)cjs, (uintptr_t)rhs);
-
-					LOG("cjs.start = 0x%08x, cjs.end = 0x%08x", cjs->pat, cjs->end_pat);
-					rhs = cjs;
-				}
+				LOG("cjs.start = 0x%08x, cjs.end = 0x%08x", cjs->pat, cjs->end_pat);
 			}
 		}
-	}while(rhs);
+	}
 }
 
-static symbol_ptr _scrounge_pass(cracker_ref cj, symbol_ref cjs, int safe) {
+static symbol_ptr _scrounge_pass(cracker_ref cj, symbol_ptr cjs, int safe) {
 	/* scrounge pass */
-	symbol_ptr rhs = cjs ?: cj->symbol_qhead;
+	symbol_ptr lhs = 0, rhs = 0;
 
-	do {
-		symbol_ref lhs = rhs;
-		rhs = symbol_next(0, rhs);
+	while(symbol_next(cj->symbol_qhead, &lhs, &cjs, &rhs)) {
+		if(0 < cracker_symbol_intergap(cj, lhs, rhs)) {
+			const uint32_t lhs_end_pat = 1 + lhs->end_pat;
+			const uint32_t cjs_pat = -1 + cjs->pat;
 
-		assert(lhs != rhs);
-
-		if(rhs) {
-			if(0 < cracker_symbol_intergap(cj, lhs, rhs)) {
-				const uint32_t lhs_end_pat = 1 + lhs->end_pat;
-				const uint32_t rhs_pat = -1 + rhs->pat;
-
-				if(_scrounge_block(cj, lhs_end_pat, rhs_pat, safe))
-					continue;
-			}
+			if(_scrounge_block(cj, lhs_end_pat, cjs_pat, safe))
+				continue;
 		}
-	}while(rhs);
+	}
 
 	LOG("symbol_count.added = 0x%08x", cj->symbol_count.added);
 	return(0);

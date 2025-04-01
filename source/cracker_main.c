@@ -131,11 +131,10 @@ void cracker_pass(cracker_ref cj, int trace)
 
 	unsigned pass_symbol_count = 0;
 
-	symbol_ptr cjs = cj->symbol_qhead;
+	symbol_ptr cjs = 0;
 
-	while(cjs) {
+	while(symbol_next(cj->symbol_qhead, 0, &cjs, 0)) {
 		cracker_pass_step(cj, cjs, trace);
-		cjs = symbol_next(0, cjs);
 		pass_symbol_count++;
 	}
 
