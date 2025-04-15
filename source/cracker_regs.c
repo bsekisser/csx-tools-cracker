@@ -32,7 +32,7 @@ static void _cracker_reg_src(cracker_ref cj, uint8_t rrs)
 
 /* **** */
 
-static void _setup_rRx_vRx_src(cracker_ref cj, uint8_t rxs, uint8_t rrs)
+static uint32_t _setup_rRx_vRx_src(cracker_ref cj, uint8_t rxs, uint8_t rrs)
 {
 	_setup_rR_vR(cj, rxs, rrs, vGPR(rrs));
 
@@ -40,6 +40,8 @@ static void _setup_rRx_vRx_src(cracker_ref cj, uint8_t rxs, uint8_t rrs)
 		vRx(rxs) += 4 >> IS_THUMB;
 		vRx(rxs) &= ~(3 >> IS_THUMB);
 	}
+
+	return(vRx(rxs));
 }
 
 /* **** */
@@ -51,14 +53,16 @@ void cracker_reg_dst(cracker_ref cj, uint8_t rxd, uint8_t rrd)
 	_setup_rR_vR(cj, rxd, rrd, 0);
 }
 
-void cracker_reg_dst_src(cracker_ref cj, uint8_t rxd, uint8_t rrd, uint8_t rxs)
+uint32_t cracker_reg_dst_src(cracker_ref cj, uint8_t rxd, uint8_t rrd, uint8_t rxs)
 {
 	_cracker_reg_dst(cj, rrd);
 
-	_setup_rR_vR(cj, rxd, rrd, vRx(rxs));
+	const uint32_t v = _setup_rR_vR(cj, rxd, rrd, vRx(rxs));
 
 	rrCIRx(rxd)->_flags = GPR_rRx(rxs)->_flags;
 	rrCIRx(rxd)->is_pc_ref = rRx_IS_PC(rxs);
+
+	return(v);
 }
 
 void cracker_reg_dst_wb(cracker_ref cj, uint8_t rxd)
@@ -70,14 +74,15 @@ void cracker_reg_dst_wb(cracker_ref cj, uint8_t rxd)
 		cracker_text(cj, vRx(rxd));
 }
 
-void cracker_reg_src(cracker_ref cj, uint8_t rxs, uint8_t rrs, int load)
+uint32_t cracker_reg_src(cracker_ref cj, uint8_t rxs, uint8_t rrs, int load)
 {
 	_cracker_reg_src(cj, rrs);
 
-	if(load)
-		_setup_rRx_vRx_src(cj, rxs, rrs);
-	else
-		_setup_rR_vR(cj, rxs, rrs, 0);
+	const uint32_t v = load
+		? _setup_rRx_vRx_src(cj, rxs, rrs)
+		: _setup_rR_vR(cj, rxs, rrs, 0);
 
 	rrCIRx(rxs)->_flags = GPR(rrs)->_flags;
+
+	return(v);
 }

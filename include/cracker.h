@@ -170,7 +170,7 @@ int cracker_text_end_if(cracker_ref cj, uint32_t pat, int end);
 /* **** */
 
 #define setup_rR_vR(_rx, _rr, _vr) _setup_rR_vR(cj, rrR##_rx, _rr, _vr)
-static inline void _setup_rR_vR(cracker_ref cj, uint8_t rx, uint8_t rr, uint32_t vr) {
+static inline uint32_t _setup_rR_vR(cracker_ref cj, uint8_t rx, uint8_t rr, uint32_t vr) {
 	rRx(rx) = rr;
-	vRx(rx) = vr;
+	return((vRx(rx) = vr));
 }
