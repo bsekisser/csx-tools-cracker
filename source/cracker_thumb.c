@@ -42,6 +42,36 @@ static int _fetch(cracker_ref cj, uint32_t* p2ir)
 	return(cracker_read_if(cj, IP & ~1U, sizeof(uint16_t), p2ir));
 }
 
+static
+uint32_t _thumb_inst_ldstm(cracker_ref cj, const unsigned bit_l,
+	uint32_t pat, char *const reglist)
+{
+	char* dst = reglist;
+
+	for(int i = 0; i <= 7; i++) {
+		uint8_t rr = BEXT(IR, i);
+		*dst++ = rr ? ('0' + i) : '.';
+
+		if(!rr) continue;
+
+		if(bit_l) {
+			setup_rR_dst_rR_src(D, i, N);
+
+			if(pat && rR_IS_PC_REF(N))
+				cracker_data_read_if(cj, pat, 4, &vR(D));
+
+			cracker_reg_dst_wb(cj, rrRD);
+		} else
+			cracker_reg_src(cj, rrRD, i, 0);
+
+		if(pat)
+			pat += 4;
+	}
+	*dst = 0;
+
+	return(pat);
+}
+
 /* **** */
 
 static int thumb_inst_add_rd_pcsp_i(cracker_ref cj)
@@ -324,6 +354,11 @@ static int thumb_inst_dpr_rms_rdn(cracker_ref cj)
 	setup_rR_vR_src(M, mlBFEXT(IR, 5, 3));
 
 	switch(aluop) {
+		case ARM_CMN:
+		case ARM_CMP:
+		case ARM_TST:
+			setup_rR_vR_src(N, mlBFEXT(IR, 2, 0));
+		break;
 		case ARM_MVN:
 		case THUMB_NEG:
 			setup_rR_dst(D, mlBFEXT(IR, 2, 0));
@@ -381,7 +416,7 @@ static int thumb_inst_ldst_bwh_o_rn_rd(cracker_ref cj)
 	int is_valid_read = 0;
 
 	if(bit_l) {
-		setup_rR_dst(D, mlBFEXT(IR, 2, 0));
+		setup_rR_dst_rR_src(D, mlBFEXT(IR, 2, 0), N);
 
 		if(rR_IS_PC_REF(N))
 			is_valid_read = cracker_data_read_if(cj, pat, size, &vR(D));
@@ -541,21 +576,11 @@ static int thumb_inst_ldstm(cracker_ref cj)
 {
 	const int bit_l = BEXT(IR, 11);
 
-	setup_rR_src(N, mlBFEXT(IR, 10, 8));
+	const uint32_t pat = setup_rR_vR_src(N, mlBFEXT(IR, 10, 8));
 
-	char reglist[9], *dst = reglist;
+	char reglist[9];
 
-	for(int i = 0; i <= 7; i++) {
-		uint8_t rr = BEXT(IR, i);
-		*dst++ = rr ? ('0' + i) : '.';
-
-		if(bit_l) {
-			cracker_reg_dst(cj, rrRD, rr);
-			cracker_reg_dst_wb(cj, rrRD);
-		} else
-			cracker_reg_src(cj, rrRD, rr, 0);
-	}
-	*dst = 0;
+	(void)_thumb_inst_ldstm(cj, bit_l, pat, reglist);
 
 	itrace(cj, "%sMIA(%s.WB, {%s})", bit_l ? "LD" : "ST",
 		rR_NAME(N), reglist);
@@ -568,19 +593,9 @@ static int thumb_inst_pop_push(cracker_ref cj)
 	const int bit_l = BEXT(IR, 11);
 	const int bit_r = BEXT(IR, 8);
 
-	char reglist[9], *dst = reglist;
+	char reglist[9];
 
-	for(int i = 0; i <= 7; i++) {
-		uint8_t rr = BEXT(IR, i);
-		*dst++ = rr ? ('0' + i) : '.';
-
-		if(bit_l) { /* pop */
-			cracker_reg_dst(cj, rrRD, rr);
-			cracker_reg_dst_wb(cj, rrRD);
-		} else /* push */
-			cracker_reg_src(cj, rrRD, rr, 0);
-	}
-	*dst = 0;
+	(void)_thumb_inst_ldstm(cj, bit_l, 0, reglist);
 
 	const char *pclrs = bit_r ? (bit_l ? ", PC" : ", LR") : "";
 	itrace(cj, "%s(rSP, r{%s%s})", bit_l ? "POP" : "PUSH", reglist, pclrs);

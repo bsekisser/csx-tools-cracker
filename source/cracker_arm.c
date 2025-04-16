@@ -236,7 +236,7 @@ static void arm_inst_dp(cracker_ref cj)
 		case ARM_CMN:
 		case ARM_TEQ:
 		case ARM_TST:
-			setup_rR_src(N, ARM_IR_RN);
+			setup_rR_vR_src(N, ARM_IR_RN);
 
 			assert(0 == mlBFEXT(IR, 15, 12));
 
@@ -313,7 +313,7 @@ static int arm_inst_dp_immediate(cracker_ref cj)
 }
 
 static int arm_inst_dp_shift_immediate(cracker_ref cj) {
-	setup_rR_src(M, ARM_IR_RM);
+	setup_rR_vR_src(M, ARM_IR_RM);
 	setup_rR_vR(S, ~0, mlBFEXT(IR, 11, 7));
 
 	switch(ARM_IR_DP_SHIFT_TYPE) {
@@ -347,8 +347,8 @@ static int arm_inst_dp_shift_immediate(cracker_ref cj) {
 
 static int arm_inst_dp_shift_register(cracker_ref cj)
 {
-	setup_rR_src(M, ARM_IR_RM);
-	setup_rR_src(S, ARM_IR_RS);
+	setup_rR_vR_src(M, ARM_IR_RM);
+	setup_rR_vR_src(S, ARM_IR_RS);
 
 	_shifter_operand(cj);
 
@@ -574,7 +574,7 @@ static int arm_inst_ldst_sh_register_offset(cracker_ref cj)
 
 static int arm_inst_ldstm(cracker_ref cj)
 {
-	setup_rR_src(N, ARM_IR_RN);
+	uint32_t pat = setup_rR_vR_src(N, ARM_IR_RN);
 
 	if(rSP == rR(N)) {
 		if(0 == ARM_IR_LDST_BIT(l20))
@@ -595,15 +595,22 @@ static int arm_inst_ldstm(cracker_ref cj)
 	char reglist[17], *dst = reglist;
 
 	for(int i = 0; i <= 15; i++) {
-		if(BEXT(IR, i)) {
-			*dst++ = (i <= 9  ? '0' : 'a' - 10) + i;
-			if(ARM_IR_LDST_BIT(l20)) {
-				cracker_reg_dst(cj, rrRD, i);
-				cracker_reg_dst_wb(cj, rrRD);
-			} else
-				cracker_reg_src(cj, rrRD, i, 0);
+		const unsigned rr = BEXT(IR, i);
+		*dst++ = rr ? ((i <= 9  ? '0' : 'a' - 10) + i) : '.';
+
+		if(!rr) continue;
+
+		if(ARM_IR_LDST_BIT(l20)) {
+			setup_rR_dst_rR_src(D, i, N);
+
+			if(rR_IS_PC_REF(N))
+				cracker_data_read_if(cj, pat, 4, &vR(D));
+
+			cracker_reg_dst_wb(cj, rrRD);
 		} else
-			*dst++ = '.';
+			cracker_reg_src(cj, rrRD, i, 0);
+
+		pat += 4;
 	}
 
 	*dst = 0;
