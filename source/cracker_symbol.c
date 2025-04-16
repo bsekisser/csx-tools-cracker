@@ -22,7 +22,7 @@ static void cracker_symbol__log__data_log(cracker_ref cj, symbol_ref cjs, size_t
 	if(0 == BTST(cjs->size, size))
 		return;
 
-	_LOG_(", (uint%u_t", size << 3);
+	_LOG_(", (uint%zu_t", size << 3);
 
 	uint32_t data = 0;
 	if(cracker_read_if(cj, cjs->pat, size, &data)) {
@@ -48,7 +48,7 @@ static void cracker_symbol__log_data(cracker_ref cj, symbol_ref cjs) {
 
 	_LOG_(": refs: 0x%04x", cjs->refs);
 
-	_LOG_(", size: 0x%04x", cjs->size);
+	_LOG_(", size: 0x%04zx", cjs->size);
 
 	cracker_symbol__log__data_log(cj, cjs, sizeof(uint32_t));
 	cracker_symbol__log__data_log(cj, cjs, sizeof(uint16_t));
@@ -64,7 +64,7 @@ static void cracker_symbol__log_string(cracker_ref cj, symbol_ref cjs) {
 
 	_LOG_(", refs: 0x%04x", cjs->refs);
 
-	_LOG_(", len: 0x%04x", len);
+	_LOG_(", len: 0x%04zx", len);
 
 	uint8_t* src = 0;
 	if(cracker_pat_src_if(cj, cjs->pat, sizeof(uint8_t), &src)) {
@@ -73,7 +73,7 @@ static void cracker_symbol__log_string(cracker_ref cj, symbol_ref cjs) {
 				_LOG_(":: %s", src);
 				break;
 			case SYMBOL_STRING_NSTRING:
-				_LOG_(":: %.*s", len - 1, src);
+				_LOG_(":: %.*s", (int)(len - 1), src);
 				break;
 		}
 	}
@@ -211,7 +211,7 @@ void cracker_symbol_queue_log(cracker_ref cj, symbol_ref sqh)
 		if(byte_count) {
 			const uint32_t cjs_pat = cjs->pat & ~(3 >> cjs->thumb);
 
-			LOG("0x%08x -- 0x%08x === 0x%08x", lhs->end_pat, cjs_pat, byte_count);
+			LOG("0x%08x -- 0x%08x === 0x%08zx", lhs->end_pat, cjs_pat, byte_count);
 			cracker_dump_hex(cj, 1 + lhs->end_pat, -1 + cjs_pat);
 			printf("\n");
 		}
