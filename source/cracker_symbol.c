@@ -205,8 +205,6 @@ void cracker_symbol_queue_log(cracker_ref cj, symbol_ref sqh)
 	symbol_ptr cjs = 0, lhs = 0;
 
 	while(symbol_next(sqh, &lhs, &cjs, 0)) {
-		cracker_symbol_log(cj, cjs);
-
 		const size_t byte_count = cracker_symbol_intergap(cj, lhs, cjs);
 		if(byte_count) {
 			const uint32_t cjs_pat = cjs->pat & ~(3 >> cjs->thumb);
@@ -215,6 +213,8 @@ void cracker_symbol_queue_log(cracker_ref cj, symbol_ref sqh)
 			cracker_dump_hex(cj, 1 + lhs->end_pat, -1 + cjs_pat);
 			printf("\n");
 		}
+
+		cracker_symbol_log(cj, cjs);
 	}
 }
 
