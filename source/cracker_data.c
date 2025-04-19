@@ -40,6 +40,8 @@ static uint8_t* _skip(uint8_t* src_start, uint8_t* src_limit, int (*test)(int))
 
 symbol_ptr cracker_data(cracker_ref cj, uint32_t pat, size_t size, size_t len)
 {
+	if(!pat) return(0);
+
 	symbol_href sqh = &cj->symbol_qhead;
 
 	symbol_ptr lhs = 0;

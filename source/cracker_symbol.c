@@ -144,13 +144,6 @@ void cracker_symbol_enqueue(symbol_href h2sqh, symbol_ref lhs, symbol_ref cjs)
 	if(0 == cjs)
 		return;
 
-	cracker_symbol_end(lhs, cjs->pat, "cracker_symbol_enqueue -- lhs");
-
-	symbol_ref rhs = lhs ? (symbol_ptr)lhs->qelem.next : 0;
-
-	if(rhs)
-		cracker_symbol_end(cjs, rhs->pat, "cracker_symbol_enqueue -- rhs");
-
 	symbol_enqueue(h2sqh, lhs, cjs);
 }
 
@@ -228,6 +221,9 @@ int cracker_symbol_step(cracker_ref cj, symbol_ref cjs)
 
 int cracker_symbol_step_block(cracker_ref cj, symbol_ref cjs)
 {
+	cjs->reg.dst = 0;
+	cjs->reg.src = 0;
+
 	PC = cjs->pat;
 	while(PC <= cjs->end_pat)
 		if(0 == cracker_symbol_step(cj, cjs))

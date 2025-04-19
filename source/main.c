@@ -327,6 +327,13 @@ int main(void)
 			cjs = 0;
 	}
 
+	symbol_ptr lhs = 0, rhs = 0;
+	while(symbol_next(cj->symbol_qhead, &lhs, &cjs, &rhs))
+		cracker_symbol_end(lhs, cjs->pat, 0);
+
+	if(rhs)
+		cracker_symbol_end(cjs, rhs->pat, 0);
+
 	_scrounge_pass_strings(cj);
 
 	cj->collect_refs = 1;

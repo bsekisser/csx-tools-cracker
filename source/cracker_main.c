@@ -61,10 +61,7 @@ static void cracker_pass_step(cracker_ref cj, symbol_ref cjs, int trace)
 
 	cj->symbol = cjs;
 	if(cracker_symbol_step_block(cj, cjs)) {
-		const uint32_t pat_bump = 4 >> cjs->thumb;
-		const uint32_t pat_mask = pat_bump - 1;
-//		cracker_symbol_end(cjs, (IP + pat_bump) & ~pat_mask, 0);
-		cracker_symbol_end(cjs, (PC + pat_bump) & ~pat_mask, 0);
+		cracker_symbol_end(cjs, PC, 0);
 
 		cracker_clear(cj);
 	}
@@ -320,6 +317,8 @@ int cracker_step(cracker_ref cj)
 
 symbol_ptr cracker_text(cracker_ref cj, uint32_t pat)
 {
+	if(!pat) return(0);
+
 	symbol_href sqh = &cj->symbol_qhead;
 
 	symbol_ptr lhs = 0;
@@ -397,7 +396,6 @@ symbol_ptr cracker_text_end(cracker_ref cj, uint32_t pat)
 	symbol_ptr lhs = 0;
 	symbol_ptr cjs = symbol_find_pat(sqh, &lhs, pat, ~1U);
 
-	cracker_symbol_end(lhs, pat, "cracker_text_end -- lhs");
 	cracker_symbol_end(cjs, pat, "cracker_text_end -- cjs");
 
 	return(cjs);
