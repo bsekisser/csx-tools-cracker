@@ -214,69 +214,6 @@ int main(void)
 	cracker_data(cj, cj->content.end, sizeof(uint32_t), 0);
 	cracker_text(cj, cj->content.base);
 
-	if(0) if(loader) { // loader
-		unsigned string_table[] = {
-			0x00000920, 0x0000418c, 0x0000419c, 0x000041a4,
-			0x00004254, 0x00004570, 0x000046af, 0x000046c8,
-			0x000048fc, 0x000050ac, 0x00006190, 0x00006c54,
-			0x000077dc, 0x00007d9c, 0x00008ea4, 0x0000ab34,
-			0x0000b114, 0x0000c0c0, 0x0000f780, 0x0000f794,
-			0x00010a14, 0x00010a2c, 0x00010a48, 0x00010eb4,
-			0x00012190, 0x000121a4, 0x000121a8, 0x000121bc,
-
-			0x0001597b, 0x00015982,
-
-			0x000159d8, 0x000159f0,	0x00015a08, 0x00015a1c,
-			0x00015a2d,
-
-			0x00015ae4,
-
-			0x00015ccc, 0x00015ce0, 0x00015cf4, 0x00015d08,
-			0x00015d1c, 0x00015d30, 0x00015d44,	0x00015d58,
-			0x00015d6c, 0x00015d80, 0x00015d94,
-
-			0x00015dbc,	0x00015dd0,
-
-			0x00015e38, 0x00015e48,
-			0x00015e5c, 0x00015e70, 0x00015e88, 0x00015f04,
-			0x00015f1c, 0x00015f68, 0x00015f78, 0x00015f7c,
-			0x00015fcc, 0x00015fdf, 0x00015ff2, 0x000166e6,
-			0x00016e48, 0x00016e58, 0x00016e64, 0x00016e7c,
-			0x000175bc, 0x0001ac04, 0x0001afa8, 0x0001afbc,
-			0x0001cef8, 0x0001cf0c, 0x0001df38, 0x0001df50,
-			0x0001df6c, 0x0001e3d8,
-
-			0x0001f40c, 0x0001f420,
-			0x0001f424, 0x0001f438,
-
-			0x00022cc4, 0x00022cdc, 0x00022cf4, 0x00022d08,
-			0x00022d19,
-
-			0x00022d25, 0x00022d39,
-
-			0x00022f4c, 0x00022f60, 0x00022f74,	0x00022f88,
-			0x00022f9c, 0x00022fb0, 0x00022fc4,	0x00022fd8,
-			0x00022fec, 0x00023000, 0x00023014,	0x00023028,
-			0x0002303c, 0x00023084, 0x00023094,	0x000230a8,
-			0x000230bc, 0x0002310c, 0x0002315a,
-
-			0x00023280, 0x00023380, 0x00023480, 0x00023580,
-			0x00023680, 0x00023780, 0x00023880, 0x00023980,
-			0x00023a80, 0x00023b80, 0x00023c80, 0x00023d80,
-			0x00023e80,
-
-			0x00024250, 0x00024350, 0x00024450, 0x00024550,
-			0x00024650, 0x00024750, 0x00024850, 0x00024950,
-			0x00024a50, 0x00024b50, 0x00024c50, 0x00024d50,
-			0x00024e50,
-
-			0,
-		};
-
-		for(unsigned i = 0; string_table[i]; i++)
-			cracker_data_string_rel(cj, string_table[i]);
-	}
-
 	uint32_t src = cj->content.end;
 	do {
 		IR = cracker_read(cj, src, sizeof(uint32_t));
@@ -312,27 +249,17 @@ int main(void)
 			exit(-1);
 	}
 
-	int safe = 1;
 	symbol_ptr cjs = 0;
 
 	for(cj->symbol_pass = 1; cj->symbol_count.added; cj->symbol_pass++)
-//	for(cj->symbol_pass = 1; cj->symbol_pass <= 3; cj->symbol_pass++)
-	{
 		cracker_pass(cj, 0);
-
-		if(0 == cj->symbol_count.added) {
-//			cjs = _scrounge_pass(cj, cjs, safe);
-			safe = 0;
-		} else
-			cjs = 0;
-	}
 
 	symbol_ptr lhs = 0, rhs = 0;
 	while(symbol_next(cj->symbol_qhead, &lhs, &cjs, &rhs))
 		cracker_symbol_end(lhs, cjs->pat, 0);
 
 	if(rhs)
-		cracker_symbol_end(cjs, rhs->pat, 0);
+		LOG_ACTION(cracker_symbol_end(cjs, rhs->pat, 0));
 
 	_scrounge_pass_strings(cj);
 
